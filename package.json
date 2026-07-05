@@ -1,0 +1,20 @@
+{
+  "name": "atlas",
+  "private": true,
+  "description": "Atlas — plataforma SaaS multiempresa para negocios de servicios por cita (nombre de trabajo)",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "backend/**/*.ts": [
+      "backend/node_modules/.bin/eslint --config backend/eslint.config.mjs --fix"
+    ],
+    "frontend/**/*.ts": [
+      "frontend/node_modules/.bin/eslint --config frontend/eslint.config.js --fix"
+    ]
+  }
+}

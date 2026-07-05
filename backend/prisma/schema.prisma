@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLATFORM_OWNER
+  BUSINESS_ADMIN
+  SUPERVISOR
+  RECEPTIONIST_CASHIER
+  PROFESSIONAL
+}
+
+/// Etapa 2 (Autenticación): todavía sin `companyId`.
+/// `Company` no existe hasta la Etapa 3 (Platform Owner); cuando exista, se
+/// añadirá `companyId Int?` (nullable porque el Platform Owner no
+/// pertenece a ninguna empresa) en una migración aparte, sin tocar este modelo.
+///
+/// Llaves primarias: numéricas seriales autoincrementales (`Int @id @default(autoincrement())`),
+/// no UUID. Decisión explícita del dueño del producto.
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+/// Token opaco (no JWT) del que solo se guarda su hash, para poder revocar
+/// y rotar de verdad en cada uso (ver docs/02_Architecture.md sección 8).
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
