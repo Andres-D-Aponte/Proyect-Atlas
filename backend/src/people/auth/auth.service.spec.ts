@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -122,6 +122,45 @@ describe('AuthService', () => {
       expect(refreshTokenService.revoke).toHaveBeenCalledWith(
         'raw-refresh-token',
       );
+    });
+  });
+
+  describe('issueImpersonationTokens', () => {
+    it('emite tokens con role BUSINESS_ADMIN y companyId cuando el actor es Platform Owner', async () => {
+      usersService.findById.mockResolvedValue(activeUser);
+
+      const result = await service.issueImpersonationTokens(activeUser.id, 42);
+
+      expect(result).toEqual({
+        accessToken: 'signed.jwt.token',
+        refreshToken: 'raw-refresh-token',
+      });
+      const [payload] = jwtService.signAsync.mock.calls[0];
+      expect(payload).toMatchObject({
+        sub: activeUser.id,
+        role: Role.BUSINESS_ADMIN,
+        companyId: 42,
+        impersonatedBy: activeUser.id,
+      });
+    });
+
+    it('rechaza si el usuario no es Platform Owner', async () => {
+      usersService.findById.mockResolvedValue({
+        ...activeUser,
+        role: Role.BUSINESS_ADMIN,
+      });
+
+      await expect(
+        service.issueImpersonationTokens(activeUser.id, 42),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rechaza si el usuario no existe', async () => {
+      usersService.findById.mockResolvedValue(null);
+
+      await expect(
+        service.issueImpersonationTokens(999, 42),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

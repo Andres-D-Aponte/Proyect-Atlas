@@ -260,7 +260,7 @@ cd ../frontend && npm install && npm run build
 
 **Qué mirar en la base de datos (con Prisma Studio, ver sección de arriba):**
 
-- Tabla `users`: tu usuario Platform Owner, con su `passwordHash` (nunca la contraseña en texto plano — fíjate que es un texto largo sin sentido, eso es un hash bcrypt).
+- Tabla `users`: tu usuario Platform Owner, con su `passwordHash` (nunca la contraseña en texto plano — fíjate que es un texto largo sin sentido, eso es un hash bcrypt). El `id` es un número entero que empieza en 1 y sube (1, 2, 3...) — todas las tablas de Atlas usan llaves primarias seriales, no UUID.
 - Tabla `refresh_tokens`: vas a ver una fila por cada login/refresh que hiciste. Los que ya usaste van a tener `revokedAt` con una fecha (revocados); solo el más reciente tendrá `revokedAt` en `null` (activo). Tampoco vas a ver el refresh token real ahí — solo su `tokenHash`, por la misma razón que la contraseña: si alguien accede a la base de datos, no puede reconstruir el token original.
 
 **Pruebas automatizadas de esta etapa:**
@@ -270,4 +270,75 @@ cd backend
 npm test          # 18 pruebas unitarias (AuthService, RefreshTokenService, RolesGuard, HealthService)
 docker compose up -d postgres
 npm run test:e2e  # 8 pruebas de punta a punta (login, refresh, permisos por rol, /auth/me)
+```
+
+---
+
+### Etapa 3 — Platform Owner
+
+**Qué se construyó:** planes, empresas, licencias e impersonación (entrar como Business Admin de una empresa, con motivo obligatorio y auditoría). Detalle completo en [`docs/modules/03_platform_owner.md`](modules/03_platform_owner.md).
+
+**Cómo compilar:** igual que siempre. Si vienes de la Etapa 2, hay una migración nueva que aplicar (ver paso 2 abajo).
+
+**Paso a paso para probarlo tú mismo, desde cero:**
+
+1. Levanta el entorno y aplica las migraciones (si ya tenías la base de la Etapa 2, esto solo añade las tablas nuevas):
+   ```bash
+   docker compose up -d --build
+   docker compose exec backend npx prisma migrate dev
+   docker compose exec backend npm run db:seed
+   ```
+2. Inicia sesión como Platform Owner (igual que en la Etapa 2) y guarda el `accessToken`.
+3. Crea un plan:
+   ```bash
+   curl -X POST http://localhost:3000/platform/plans \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"name":"Pro","enabledModules":["whatsapp"],"maxUsers":10}'
+   ```
+   Anota el `id` que te devuelve.
+4. Crea una empresa:
+   ```bash
+   curl -X POST http://localhost:3000/platform/companies \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"name":"Barbería Elegance"}'
+   ```
+   Anota el `id` de la empresa.
+5. Asígnale una licencia (usando los dos `id` anteriores):
+   ```bash
+   curl -X POST http://localhost:3000/platform/companies/ID_EMPRESA/license \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"planId":ID_PLAN,"billingCycle":"MONTHLY","endDate":"2026-12-31T00:00:00.000Z"}'
+   ```
+6. Entra como Business Admin de esa empresa (impersonación) — el motivo es obligatorio:
+   ```bash
+   curl -X POST http://localhost:3000/platform/companies/ID_EMPRESA/impersonate \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"reason":"Soporte técnico"}'
+   ```
+   Te devuelve un `accessToken`/`refreshToken` nuevos.
+7. Comprueba que ese token nuevo "actúa como" Business Admin de la empresa:
+   ```bash
+   curl http://localhost:3000/auth/me -H "Authorization: Bearer TOKEN_DE_IMPERSONACION"
+   ```
+   Debe devolver `"role":"BUSINESS_ADMIN"`, `"companyId":ID_EMPRESA` y `"impersonatedBy"` con tu propio `id` de Platform Owner — es la misma persona, actuando temporalmente con otro rol.
+
+**Qué mirar en la base de datos:**
+
+- Tabla `plans`: el plan que creaste, con sus límites (los que no pusiste quedan en `null` = sin límite) y `enabledModules` como un arreglo.
+- Tabla `companies`: la empresa creada.
+- Tabla `licenses`: una fila por empresa (relación 1:1), con `billingCycle`, `endDate` y `expirationBehavior`.
+- Tabla `impersonation_logs`: **esta es la que vale la pena mirar con atención** — cada vez que impersonas una empresa, aparece una fila nueva con el motivo que escribiste, el `platformOwnerId`, el `companyId` y la fecha. Nunca se puede editar ni borrar desde la aplicación (solo inserción).
+- Tabla `users`: fíjate que tu usuario Platform Owner sigue teniendo `companyId` en `null` — nunca pertenece a una empresa.
+
+**Pruebas automatizadas de esta etapa:**
+
+```bash
+cd backend
+npm test          # 16 pruebas nuevas (34 en total): Plans, Companies, Licenses, Impersonation, AuthService.issueImpersonationTokens
+docker compose up -d postgres
+npm run test:e2e  # 5 pruebas nuevas (13 en total): 403 por rol, 401 sin token, flujo completo con verificación de auditoría, motivo vacío (400), empresa inexistente (404)
 ```

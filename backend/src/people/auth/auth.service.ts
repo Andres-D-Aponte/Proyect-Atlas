@@ -1,6 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { Role } from '../../../generated/prisma';
 import { UsersService } from '../users/users.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { AuthenticatedUser, JwtPayload } from './auth-user.interface';
@@ -52,16 +57,47 @@ export class AuthService {
     await this.refreshTokenService.revoke(rawRefreshToken);
   }
 
-  private async issueTokens(user: AuthenticatedUser): Promise<AuthTokensDto> {
-    const payload: JwtPayload = {
+  /**
+   * Emite un par de tokens para que el Platform Owner opere temporalmente
+   * como Business Admin de `companyId`. El `sub` sigue siendo el propio
+   * Platform Owner (nunca se suplantan credenciales de otro usuario) — lo
+   * que cambia es el `role` efectivo y el `companyId` de contexto.
+   */
+  async issueImpersonationTokens(
+    platformOwnerId: number,
+    companyId: number,
+  ): Promise<AuthTokensDto> {
+    const platformOwner = await this.usersService.findById(platformOwnerId);
+
+    if (!platformOwner || platformOwner.role !== Role.PLATFORM_OWNER) {
+      throw new ForbiddenException(
+        'Solo el Platform Owner puede impersonar una empresa',
+      );
+    }
+
+    return this.issueTokensForPayload({
+      sub: platformOwner.id,
+      email: platformOwner.email,
+      role: Role.BUSINESS_ADMIN,
+      companyId,
+      impersonatedBy: platformOwner.id,
+    });
+  }
+
+  private issueTokens(user: AuthenticatedUser): Promise<AuthTokensDto> {
+    return this.issueTokensForPayload({
       sub: user.id,
       email: user.email,
       role: user.role,
-    };
+    });
+  }
 
+  private async issueTokensForPayload(
+    payload: JwtPayload,
+  ): Promise<AuthTokensDto> {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
-      this.refreshTokenService.issue(user.id),
+      this.refreshTokenService.issue(payload.sub),
     ]);
 
     return { accessToken, refreshToken };

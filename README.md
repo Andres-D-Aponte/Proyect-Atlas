@@ -2,7 +2,7 @@
 
 Plataforma SaaS multiempresa para negocios de servicios por cita (barberías, spas, estudios de uñas y similares). "Atlas" es un nombre de trabajo temporal.
 
-Este repositorio va por la **Etapa 2 — Autenticación** del roadmap.
+Este repositorio va por la **Etapa 3 — Platform Owner** del roadmap.
 
 ## Documentación
 

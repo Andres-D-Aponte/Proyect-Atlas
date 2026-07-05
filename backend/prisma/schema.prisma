@@ -19,11 +19,22 @@ enum Role {
   PROFESSIONAL
 }
 
-/// Etapa 2 (Autenticación): todavía sin `companyId`.
-/// `Company` no existe hasta la Etapa 3 (Platform Owner); cuando exista, se
-/// añadirá `companyId Int?` (nullable porque el Platform Owner no
-/// pertenece a ninguna empresa) en una migración aparte, sin tocar este modelo.
-///
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+  TRIAL
+}
+
+/// Comportamiento al vencer una licencia (ver docs/01_Product_Requirements_Document.md sección 2.3).
+enum LicenseExpirationBehavior {
+  IMMEDIATE_READ_ONLY
+  GRACE_PERIOD
+  TEMPORARY_ACCESS
+  FULL_BLOCK
+}
+
 /// Llaves primarias: numéricas seriales autoincrementales (`Int @id @default(autoincrement())`),
 /// no UUID. Decisión explícita del dueño del producto.
 model User {
@@ -35,7 +46,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  refreshTokens RefreshToken[]
+  /// Nula para el Platform Owner (no pertenece a ninguna empresa).
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  refreshTokens     RefreshToken[]
+  impersonationLogs ImpersonationLog[]
 
   @@map("users")
 }
@@ -53,4 +69,80 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+/// Empresa cliente (tenant). Etapa 3: solo identidad mínima. El branding,
+/// horarios y métodos de pago son la Etapa 4 (Configuración inicial del
+/// negocio) a propósito — no se adelantan aquí.
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  license           License?
+  impersonationLogs ImpersonationLog[]
+
+  @@map("companies")
+}
+
+/// Nivel + módulos opcionales + límites de uso, configurables por el
+/// Platform Owner (ver docs/01_Product_Requirements_Document.md sección 2.4).
+/// Los límites son nullable = sin límite.
+model Plan {
+  id                       Int      @id @default(autoincrement())
+  name                     String
+  enabledModules           String[]
+  maxBranches              Int?
+  maxProfessionals         Int?
+  maxUsers                 Int?
+  maxAppointmentsPerMonth  Int?
+  maxWhatsappConversations Int?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  licenses License[]
+
+  @@map("plans")
+}
+
+/// Ciclo de facturación vigente de una empresa. Una empresa tiene, como
+/// mucho, una licencia activa a la vez (sin historial de licencias pasadas
+/// todavía — no hay necesidad de eso en el MVP, ver Project Charter: nada de
+/// contabilidad completa).
+model License {
+  id                 Int                       @id @default(autoincrement())
+  companyId          Int                       @unique
+  company            Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  planId             Int
+  plan               Plan                      @relation(fields: [planId], references: [id])
+  billingCycle       BillingCycle
+  startDate          DateTime                  @default(now())
+  endDate            DateTime
+  expirationBehavior LicenseExpirationBehavior @default(IMMEDIATE_READ_ONLY)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@map("licenses")
+}
+
+/// Registro inmutable y obligatorio de cada vez que el Platform Owner entra
+/// como Business Admin de una empresa (solo inserción, nunca update/delete).
+/// Acotado a este caso de uso puntual; el sistema de auditoría genérico para
+/// todos los módulos (shared/audit) sigue pendiente y se construirá cuando
+/// haya más operaciones que auditar.
+model ImpersonationLog {
+  id              Int      @id @default(autoincrement())
+  platformOwnerId Int
+  platformOwner   User     @relation(fields: [platformOwnerId], references: [id])
+  companyId       Int
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reason          String
+  ipAddress       String?
+  startedAt       DateTime @default(now())
+
+  @@index([companyId])
+  @@map("impersonation_logs")
 }
