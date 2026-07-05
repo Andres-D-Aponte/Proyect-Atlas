@@ -1,0 +1,91 @@
+import { Component, OnInit, signal, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+import { SettingsService } from '../../../core/services/settings.service';
+import { Branch, OpeningHour } from '../../../core/models/settings.model';
+
+const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+@Component({
+  selector: 'app-branches',
+  standalone: true,
+  imports: [FormsModule, RouterLink, RouterLinkActive],
+  templateUrl: './branches.component.html',
+  styleUrl: './branches.component.scss',
+})
+export class BranchesComponent implements OnInit {
+  private readonly settingsService = inject(SettingsService);
+  protected readonly authService = inject(AuthService);
+
+  protected readonly dayNames = DAY_NAMES;
+  protected readonly branches = signal<Branch[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly editingScheduleFor = signal<number | null>(null);
+  protected readonly draftSchedule = signal<OpeningHour[]>([]);
+
+  protected newBranchName = '';
+  protected newBranchAddress = '';
+
+  async ngOnInit(): Promise<void> {
+    await this.reload();
+  }
+
+  private async reload(): Promise<void> {
+    this.loading.set(true);
+    this.branches.set(await this.settingsService.listBranches());
+    this.loading.set(false);
+  }
+
+  async createBranch(): Promise<void> {
+    if (!this.newBranchName.trim()) {
+      return;
+    }
+
+    await this.settingsService.createBranch(
+      this.newBranchName.trim(),
+      this.newBranchAddress.trim() || undefined,
+    );
+    this.newBranchName = '';
+    this.newBranchAddress = '';
+    await this.reload();
+  }
+
+  editSchedule(branch: Branch): void {
+    this.editingScheduleFor.set(branch.id);
+    this.draftSchedule.set(branch.openingHours ? [...branch.openingHours] : []);
+  }
+
+  cancelSchedule(): void {
+    this.editingScheduleFor.set(null);
+    this.draftSchedule.set([]);
+  }
+
+  addScheduleRow(): void {
+    this.draftSchedule.set([
+      ...this.draftSchedule(),
+      { dayOfWeek: 1, opensAt: '09:00', closesAt: '18:00' },
+    ]);
+  }
+
+  removeScheduleRow(index: number): void {
+    this.draftSchedule.set(this.draftSchedule().filter((_, i) => i !== index));
+  }
+
+  updateScheduleRow(index: number, field: keyof OpeningHour, value: string): void {
+    const next = [...this.draftSchedule()];
+    next[index] = { ...next[index], [field]: field === 'dayOfWeek' ? Number(value) : value };
+    this.draftSchedule.set(next);
+  }
+
+  async saveSchedule(): Promise<void> {
+    const branchId = this.editingScheduleFor();
+    if (branchId === null) {
+      return;
+    }
+
+    await this.settingsService.setBranchSchedule(branchId, this.draftSchedule());
+    this.cancelSchedule();
+    await this.reload();
+  }
+}

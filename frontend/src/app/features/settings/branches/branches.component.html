@@ -1,0 +1,81 @@
+<div class="page">
+  <header>
+    <h1>Atlas — Sucursales</h1>
+    <div class="user-info">
+      <span>{{ authService.currentUser()?.email }}</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
+    <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
+  </nav>
+
+  <section class="create-form">
+    <input type="text" placeholder="Nombre de la sucursal" [(ngModel)]="newBranchName" name="newBranchName" />
+    <input type="text" placeholder="Dirección (opcional)" [(ngModel)]="newBranchAddress" name="newBranchAddress" />
+    <button type="button" (click)="createBranch()">Crear sucursal</button>
+  </section>
+
+  @if (loading()) {
+    <p>Cargando…</p>
+  } @else if (branches().length === 0) {
+    <p>Todavía no hay sucursales creadas.</p>
+  } @else {
+    @for (branch of branches(); track branch.id) {
+      <div class="branch-card">
+        <div class="branch-header">
+          <strong>{{ branch.name }}</strong>
+          <span>{{ branch.address }}</span>
+          <button type="button" (click)="editSchedule(branch)">Editar horario</button>
+        </div>
+
+        @if (!editingScheduleFor() && branch.openingHours?.length) {
+          <ul class="schedule-summary">
+            @for (hour of branch.openingHours; track hour.dayOfWeek) {
+              <li>{{ dayNames[hour.dayOfWeek] }}: {{ hour.opensAt }} – {{ hour.closesAt }}</li>
+            }
+          </ul>
+        }
+
+        @if (editingScheduleFor() === branch.id) {
+          <div class="schedule-editor">
+            @for (row of draftSchedule(); track $index) {
+              <div class="schedule-row">
+                <select
+                  [ngModel]="row.dayOfWeek"
+                  (ngModelChange)="updateScheduleRow($index, 'dayOfWeek', $any($event))"
+                  name="day-{{ $index }}"
+                >
+                  @for (day of dayNames; track $index) {
+                    <option [value]="$index">{{ day }}</option>
+                  }
+                </select>
+                <input
+                  type="text"
+                  [ngModel]="row.opensAt"
+                  (ngModelChange)="updateScheduleRow($index, 'opensAt', $event)"
+                  name="opensAt-{{ $index }}"
+                  placeholder="09:00"
+                />
+                <input
+                  type="text"
+                  [ngModel]="row.closesAt"
+                  (ngModelChange)="updateScheduleRow($index, 'closesAt', $event)"
+                  name="closesAt-{{ $index }}"
+                  placeholder="18:00"
+                />
+                <button type="button" (click)="removeScheduleRow($index)">Quitar</button>
+              </div>
+            }
+            <div class="schedule-actions">
+              <button type="button" (click)="addScheduleRow()">Añadir día</button>
+              <button type="button" (click)="saveSchedule()">Guardar horario</button>
+              <button type="button" (click)="cancelSchedule()">Cancelar</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

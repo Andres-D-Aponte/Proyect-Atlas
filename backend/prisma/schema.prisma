@@ -35,6 +35,16 @@ enum LicenseExpirationBehavior {
   FULL_BLOCK
 }
 
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  NEQUI
+  DAVIPLATA
+  CARD
+  CREDIT
+  OTHER
+}
+
 /// Llaves primarias: numéricas seriales autoincrementales (`Int @id @default(autoincrement())`),
 /// no UUID. Decisión explícita del dueño del producto.
 model User {
@@ -71,9 +81,9 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-/// Empresa cliente (tenant). Etapa 3: solo identidad mínima. El branding,
-/// horarios y métodos de pago son la Etapa 4 (Configuración inicial del
-/// negocio) a propósito — no se adelantan aquí.
+/// Empresa cliente (tenant). Etapa 4 añade branding, zona horaria/moneda/
+/// idioma y métodos de pago habilitados — configuración propia del negocio,
+/// separada a propósito de la identidad mínima creada en la Etapa 3.
 model Company {
   id        Int      @id @default(autoincrement())
   name      String
@@ -81,11 +91,41 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  logoUrl               String?
+  primaryColor          String?
+  /// Zona horaria por defecto; cada Branch puede sobreescribirla.
+  timezone              String          @default("America/Bogota")
+  currency              String          @default("COP")
+  language              String          @default("es")
+  /// Por defecto solo efectivo y transferencia (ver PRD sección 4.3).
+  enabledPaymentMethods PaymentMethod[] @default([CASH, TRANSFER])
+
   users             User[]
+  branches          Branch[]
   license           License?
   impersonationLogs ImpersonationLog[]
 
   @@map("companies")
+}
+
+/// Sucursal de una empresa. Horarios como Json simple (lista de
+/// {dayOfWeek, opensAt, closesAt}) en vez de una tabla aparte — no aporta
+/// valor normalizarlo más para el MVP (ver docs/01 sección 4.2/4.6).
+model Branch {
+  id           Int      @id @default(autoincrement())
+  companyId    Int
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  address      String?
+  /// Nula = usa la zona horaria de la empresa.
+  timezone     String?
+  openingHours Json?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("branches")
 }
 
 /// Nivel + módulos opcionales + límites de uso, configurables por el

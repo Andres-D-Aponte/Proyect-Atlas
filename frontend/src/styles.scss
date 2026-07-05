@@ -1,1 +1,122 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales mínimos, compartidos por las páginas de Atlas. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  color: #1a1a1a;
+  background: #f5f5f7;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+
+    h1 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  }
+
+  nav.tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    a {
+      color: #1a2b3c;
+      text-decoration: none;
+      padding-bottom: 0.25rem;
+
+      &.active {
+        border-bottom: 2px solid #1a2b3c;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #eee;
+  }
+}
+
+.create-form,
+.settings-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+}
+
+.settings-form {
+  flex-direction: column;
+  max-width: 420px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+  }
+}
+
+input,
+select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+button {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-radius: 4px;
+  background: #1a2b3c;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.error {
+  color: #b00020;
+}
+
+.success {
+  color: #1c7a35;
+}

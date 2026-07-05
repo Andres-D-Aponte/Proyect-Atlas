@@ -1,0 +1,66 @@
+<div class="page">
+  <header>
+    <h1>Atlas — {{ companyName || 'Configuración' }}</h1>
+    <div class="user-info">
+      <span>{{ authService.currentUser()?.email }}</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
+    <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
+  </nav>
+
+  @if (loading()) {
+    <p>Cargando…</p>
+  } @else {
+    <form class="settings-form" [formGroup]="form" (ngSubmit)="save()">
+      <label>
+        Logo (URL)
+        <input type="text" formControlName="logoUrl" placeholder="https://…" />
+      </label>
+
+      <label>
+        Color principal
+        <input type="text" formControlName="primaryColor" placeholder="#1A2B3C" />
+      </label>
+
+      <label>
+        Zona horaria
+        <input type="text" formControlName="timezone" />
+      </label>
+
+      <label>
+        Moneda (ISO 4217)
+        <input type="text" formControlName="currency" maxlength="3" />
+      </label>
+
+      <label>
+        Idioma
+        <input type="text" formControlName="language" />
+      </label>
+
+      <fieldset>
+        <legend>Métodos de pago habilitados</legend>
+        @for (method of allPaymentMethods; track method) {
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              [checked]="isPaymentMethodEnabled(method)"
+              (change)="togglePaymentMethod(method, $any($event.target).checked)"
+            />
+            {{ method }}
+          </label>
+        }
+      </fieldset>
+
+      @if (savedMessage()) {
+        <p class="success">{{ savedMessage() }}</p>
+      }
+
+      <button type="submit" [disabled]="saving()">
+        {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </form>
+  }
+</div>

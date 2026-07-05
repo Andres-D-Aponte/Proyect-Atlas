@@ -13,7 +13,7 @@
 
 - **PostgreSQL**: la base de datos. Corre dentro de un contenedor Docker.
 - **Backend (NestJS)**: la API. También corre en un contenedor Docker, y se conecta a PostgreSQL.
-- **Frontend (Angular)**: lo que eventualmente verás en el navegador. Por ahora (Etapa 1-2) es solo una pantalla de marcador de posición.
+- **Frontend (Angular)**: lo que ves en el navegador. Desde la Etapa 4 ya es funcional: login, panel del Platform Owner y configuración del negocio.
 - **Prisma**: la herramienta que traduce entre el código TypeScript del backend y las tablas reales de PostgreSQL. Cuando cambiamos el modelo de datos (`backend/prisma/schema.prisma`), Prisma genera una "migración" (un archivo SQL) y lo aplica a la base de datos.
 - **Docker Compose**: el archivo `docker-compose.yml` en la raíz del proyecto describe los tres servicios de arriba y cómo se conectan entre sí. Es lo único que necesitas levantar para tener todo el entorno funcionando.
 
@@ -342,3 +342,54 @@ npm test          # 16 pruebas nuevas (34 en total): Plans, Companies, Licenses,
 docker compose up -d postgres
 npm run test:e2e  # 5 pruebas nuevas (13 en total): 403 por rol, 401 sin token, flujo completo con verificación de auditoría, motivo vacío (400), empresa inexistente (404)
 ```
+
+---
+
+### Etapa 4 — Configuración inicial del negocio
+
+**Qué se construyó:** identidad de marca de la empresa (logo, colores), zona horaria/moneda/idioma, métodos de pago habilitados, sucursales con horario semanal. **Primera etapa con frontend real** (antes solo existía el backend). Detalle completo en [`docs/modules/04_configuracion_inicial.md`](modules/04_configuracion_inicial.md).
+
+**Cómo compilar:** igual que siempre para el backend. Para el frontend, si nunca lo hiciste: `cd frontend && npm install`.
+
+**Paso a paso para probarlo tú mismo, desde cero, usando el navegador:**
+
+1. Levanta el entorno y migra:
+   ```bash
+   docker compose up -d --build
+   docker compose exec backend npx prisma migrate dev
+   docker compose exec backend npm run db:seed
+   ```
+2. Abre `http://localhost:4200` en tu navegador. Debe redirigirte a `/login`.
+3. Inicia sesión con `owner@atlas.dev` / `ChangeMe123!` (el Platform Owner del seed).
+4. Vas a caer en **Atlas — Empresas**: el panel del Platform Owner. Crea una empresa nueva con el formulario de arriba.
+5. Haz clic en **"Entrar como Business Admin"** en cualquier fila. El navegador te va a pedir un motivo (es obligatorio, recuerda la Etapa 3) — escribe cualquier texto y acepta.
+6. Vas a caer en **Atlas — [nombre de la empresa]**: la pantalla de configuración. Verifica que por defecto la moneda es `COP`, el idioma `es`, y los métodos de pago `CASH` y `TRANSFER` ya están marcados (sin que nadie los haya configurado — es el comportamiento "inteligente por defecto").
+7. Cambia el color principal o cualquier otro campo y presiona "Guardar cambios" — debe aparecer "Cambios guardados."
+8. Ve a la pestaña **Sucursales**, crea una sucursal, y haz clic en "Editar horario" para agregarle un día con hora de apertura/cierre. Guarda y confirma que se ve reflejado en la tarjeta de la sucursal.
+9. Para volver a entrar como Platform Owner, cierra sesión ("Salir") e inicia sesión de nuevo con `owner@atlas.dev`.
+
+**Qué mirar en la base de datos:**
+
+- Tabla `companies`: ahora con `logoUrl`, `primaryColor`, `timezone`, `currency`, `language`, `enabledPaymentMethods` (un arreglo de Postgres, vas a verlo como `{CASH,TRANSFER}`).
+- Tabla `branches`: la sucursal creada, con `openingHours` como JSON — ábrela en Prisma Studio para ver el arreglo de días/horas tal cual lo guardó el formulario.
+
+**Qué mirar en el navegador (DevTools):**
+
+- Pestaña **Application → Local Storage** (`http://localhost:4200`): vas a ver `atlas.accessToken` y `atlas.refreshToken` — así es como el frontend recuerda tu sesión entre recargas de página.
+- Pestaña **Network**: cada petición a `/settings/...` o `/platform/...` lleva un header `Authorization: Bearer <token>` — lo añade automáticamente el interceptor HTTP, no cada componente por separado.
+
+**Pruebas automatizadas de esta etapa:**
+
+```bash
+cd backend
+npm test          # 11 pruebas nuevas (45 en total): CompanySettingsService, BranchesService, TenantGuard
+docker compose up -d postgres
+npm run test:e2e  # 7 pruebas nuevas (20 en total): defaults de empresa nueva, actualización, validaciones, 403, aislamiento real entre dos empresas, horario inválido
+
+cd ../frontend
+npm run lint
+npm run build
+npm test -- --watch=false
+```
+
+Para la verificación en navegador, no hace falta Playwright instalado en el proyecto — si quieres repetirla tú mismo, basta con abrir `http://localhost:4200` y seguir los pasos de arriba a mano.
