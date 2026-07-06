@@ -1,0 +1,12 @@
+{
+  "name": "atlas-browser-check",
+  "private": true,
+  "description": "Herramienta de verificación manual: recorre Atlas en un navegador real (Playwright) y reporta errores de consola.",
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}

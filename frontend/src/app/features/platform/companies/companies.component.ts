@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PlatformService } from '../../../core/services/platform.service';
 import { Company } from '../../../core/models/platform.model';
+import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-companies',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ThemeToggleComponent],
   templateUrl: './companies.component.html',
   styleUrl: './companies.component.scss',
 })

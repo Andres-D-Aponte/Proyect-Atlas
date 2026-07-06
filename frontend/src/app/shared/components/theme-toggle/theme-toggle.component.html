@@ -1,0 +1,13 @@
+<button
+  type="button"
+  class="theme-toggle"
+  (click)="toggle()"
+  [attr.aria-label]="themeService.theme() === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+  [title]="themeService.theme() === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+>
+  @if (themeService.theme() === 'dark') {
+    ☀️
+  } @else {
+    🌙
+  }
+</button>

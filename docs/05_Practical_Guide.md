@@ -106,7 +106,11 @@ En `http://localhost:3000/api/docs` tienes **Swagger**: una página interactiva 
 
 ### Ver el frontend
 
-`http://localhost:4200` en el navegador. Por ahora solo verás el texto "Atlas — Plataforma en construcción" (Etapa 1). Esto va a ir cambiando a medida que construyamos pantallas reales.
+`http://localhost:4200` en el navegador. Desde la Etapa 4 ya es una aplicación real: te redirige a `/login`.
+
+### Modo claro / oscuro
+
+Desde la Etapa 4, cada pantalla tiene un botón 🌙/☀️ (junto a tu correo, en la esquina de la pantalla de login) que alterna entre modo claro y oscuro. La elección se recuerda en tu navegador (`localStorage`, clave `atlas.theme`) — si nunca lo tocas, la app sigue automáticamente la preferencia de tu sistema operativo. Es puramente visual (CSS, variables de color); no afecta ningún dato ni comportamiento.
 
 ---
 
@@ -187,6 +191,19 @@ npm test               # pruebas unitarias (Vitest)
 npm run lint
 npm run build
 ```
+
+### Ver la aplicación funcionando de verdad, en un navegador (sin hacerlo a mano)
+
+Además de las pruebas automatizadas de arriba (que verifican lógica, no la experiencia visual), el proyecto tiene una herramienta que abre un navegador real (headless, con Playwright) y recorre la aplicación completa — login, crear empresa, impersonar, configuración, sucursales — tomando una captura de pantalla en cada paso y avisando si hubo algún error en la consola del navegador.
+
+```bash
+cd tools/browser-check
+npm install                        # solo la primera vez
+npx playwright install chromium    # solo la primera vez
+npm run check
+```
+
+Las capturas quedan en `tools/browser-check/screenshots/`. Ábrelas y mira que se vean bien — el script solo te dice si hubo errores técnicos, no si algo se ve mal visualmente. Detalle completo en [`tools/browser-check/README.md`](../tools/browser-check/README.md) y en la skill `.claude/skills/atlas-browser-check/SKILL.md` (así es como yo, la IA, la vuelvo a correr en el futuro sin tener que rehacerla desde cero).
 
 ---
 

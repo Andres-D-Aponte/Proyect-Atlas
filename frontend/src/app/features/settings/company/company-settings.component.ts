@@ -4,11 +4,12 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { ALL_PAYMENT_METHODS, PaymentMethod } from '../../../core/models/settings.model';
+import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-company-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, RouterLinkActive],
+  imports: [ReactiveFormsModule, RouterLink, RouterLinkActive, ThemeToggleComponent],
   templateUrl: './company-settings.component.html',
   styleUrl: './company-settings.component.scss',
 })

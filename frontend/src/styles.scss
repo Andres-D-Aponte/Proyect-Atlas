@@ -1,5 +1,66 @@
 /* Estilos globales mínimos, compartidos por las páginas de Atlas. */
 
+/* Modo claro (por defecto) */
+:root {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #666666;
+  --border: #dddddd;
+  --input-border: #cccccc;
+  --primary: #1a2b3c;
+  --primary-contrast: #ffffff;
+  --error: #b00020;
+  --success: #1c7a35;
+  --shadow: rgba(0, 0, 0, 0.08);
+}
+
+/* Si el usuario nunca eligió explícitamente, sigue la preferencia del sistema. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #15171b;
+    --surface: #1f2227;
+    --text: #e8e8ea;
+    --text-muted: #a3a3aa;
+    --border: #34373d;
+    --input-border: #44474e;
+    --primary: #4a7ab0;
+    --primary-contrast: #ffffff;
+    --error: #ff6b6b;
+    --success: #52c47a;
+    --shadow: rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Elección explícita del usuario (switch de modo claro/oscuro), siempre gana. */
+:root[data-theme='dark'] {
+  --bg: #15171b;
+  --surface: #1f2227;
+  --text: #e8e8ea;
+  --text-muted: #a3a3aa;
+  --border: #34373d;
+  --input-border: #44474e;
+  --primary: #4a7ab0;
+  --primary-contrast: #ffffff;
+  --error: #ff6b6b;
+  --success: #52c47a;
+  --shadow: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme='light'] {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #666666;
+  --border: #dddddd;
+  --input-border: #cccccc;
+  --primary: #1a2b3c;
+  --primary-contrast: #ffffff;
+  --error: #b00020;
+  --success: #1c7a35;
+  --shadow: rgba(0, 0, 0, 0.08);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -7,8 +68,9 @@
 body {
   margin: 0;
   font-family: sans-serif;
-  color: #1a1a1a;
-  background: #f5f5f7;
+  color: var(--text);
+  background: var(--bg);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .page {
@@ -32,7 +94,7 @@ body {
       align-items: center;
       gap: 0.75rem;
       font-size: 0.9rem;
-      color: #555;
+      color: var(--text-muted);
     }
   }
 
@@ -42,12 +104,12 @@ body {
     margin-bottom: 1.5rem;
 
     a {
-      color: #1a2b3c;
+      color: var(--primary);
       text-decoration: none;
       padding-bottom: 0.25rem;
 
       &.active {
-        border-bottom: 2px solid #1a2b3c;
+        border-bottom: 2px solid var(--primary);
         font-weight: 600;
       }
     }
@@ -57,13 +119,13 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--surface);
 
   th,
   td {
     text-align: left;
     padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border);
   }
 }
 
@@ -74,7 +136,7 @@ table {
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: white;
+  background: var(--surface);
   border-radius: 6px;
 }
 
@@ -93,17 +155,19 @@ table {
 input,
 select {
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   font-size: 0.95rem;
+  background: var(--surface);
+  color: var(--text);
 }
 
 button {
   padding: 0.5rem 0.9rem;
   border: none;
   border-radius: 4px;
-  background: #1a2b3c;
-  color: white;
+  background: var(--primary);
+  color: var(--primary-contrast);
   font-size: 0.9rem;
   cursor: pointer;
 
@@ -114,9 +178,9 @@ button {
 }
 
 .error {
-  color: #b00020;
+  color: var(--error);
 }
 
 .success {
-  color: #1c7a35;
+  color: var(--success);
 }
