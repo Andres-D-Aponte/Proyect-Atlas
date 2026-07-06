@@ -15,10 +15,6 @@
     <button type="button" (click)="createCompany()">+ Crear empresa</button>
   </section>
 
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
-
   @if (loading()) {
     <p><span class="spinner"></span> Cargando…</p>
   } @else if (companies().length === 0) {

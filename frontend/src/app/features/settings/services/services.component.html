@@ -12,10 +12,6 @@
     <a routerLink="/settings/services" routerLinkActive="active">Servicios</a>
   </nav>
 
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
-
   @if (loading()) {
     <p><span class="spinner"></span> Cargando…</p>
   } @else {

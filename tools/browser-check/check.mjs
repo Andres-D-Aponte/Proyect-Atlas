@@ -179,6 +179,32 @@ try {
   await serviceRow.locator('text=Inactivo').waitFor();
   await shot('17-service-deactivated');
 
+  step('18) Verificar que un error del backend se muestra como notificación (toast)');
+  await page.fill('input[placeholder="Nueva categoría"]', 'Cortes');
+  await page.click('button:has-text("+ Crear categoría")'); // "Cortes" ya existe → 409 (esperado)
+  await page.waitForSelector('.toast-error:has-text("Ya existe una categoría")');
+  await shot('18-error-toast-duplicate-category');
+
+  step('19) Verificar el mensaje de validación del backend (comisión > 100)');
+  await page.fill('input[name=newServiceName]', 'Servicio con comisión inválida');
+  await page.fill('input[name=newServiceCommissionValue]', '150');
+  await page.click('button:has-text("+ Crear servicio")'); // comisión porcentual > 100 → 400 (esperado)
+  await page.waitForSelector('.toast-error:has-text("no puede ser mayor a 100")');
+  await shot('19-error-toast-validation');
+
+  // Los pasos 18/19 disparan a propósito un 409 y un 400 para probar el sistema
+  // de notificaciones; Chromium los registra como "console error" aunque la app
+  // los manejó correctamente (se ve el toast). Se descuentan para no confundirlos
+  // con errores reales de consola.
+  const expectedNetworkErrors = [
+    'Failed to load resource: the server responded with a status of 409 (Conflict)',
+    'Failed to load resource: the server responded with a status of 400 (Bad Request)',
+  ];
+  for (const expected of expectedNetworkErrors) {
+    const index = consoleErrors.indexOf(expected);
+    if (index !== -1) consoleErrors.splice(index, 1);
+  }
+
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');
   console.log('Errores de página:', pageErrors.length ? pageErrors : 'ninguno');

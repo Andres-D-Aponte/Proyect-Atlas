@@ -20,7 +20,6 @@ export class CompaniesComponent implements OnInit {
 
   protected readonly companies = signal<Company[]>([]);
   protected readonly loading = signal(false);
-  protected readonly errorMessage = signal<string | null>(null);
   protected newCompanyName = '';
 
   protected readonly creatingAdminFor = signal<number | null>(null);
@@ -60,18 +59,16 @@ export class CompaniesComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
     try {
       const tokens = await this.platformService.impersonate(company.id, reason.trim());
       await this.authService.beginImpersonation(tokens);
       await this.router.navigateByUrl('/settings/company');
     } catch {
-      this.errorMessage.set('No se pudo impersonar la empresa.');
+      // El interceptor global ya mostró el toast con el motivo del error.
     }
   }
 
   startCreatingAdmin(company: Company): void {
-    this.errorMessage.set(null);
     this.newAdminEmail = '';
     this.newAdminPassword = '';
     this.creatingAdminFor.set(company.id);
@@ -86,7 +83,6 @@ export class CompaniesComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
     try {
       await this.platformService.createBusinessAdmin(
         company.id,
@@ -95,9 +91,7 @@ export class CompaniesComponent implements OnInit {
       );
       this.cancelCreatingAdmin();
     } catch {
-      this.errorMessage.set(
-        'No se pudo crear el Business Admin. Verifica que el correo no esté en uso.',
-      );
+      // El interceptor global ya mostró el toast con el motivo del error.
     }
   }
 

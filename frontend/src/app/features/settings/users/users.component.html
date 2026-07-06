@@ -34,10 +34,6 @@
     </button>
   </section>
 
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
-
   @if (loading()) {
     <p><span class="spinner"></span> Cargando…</p>
   } @else if (users().length === 0) {

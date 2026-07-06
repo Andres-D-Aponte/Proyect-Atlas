@@ -25,7 +25,6 @@ export class UsersComponent implements OnInit {
   protected readonly users = signal<CompanyUser[]>([]);
   protected readonly loading = signal(true);
   protected readonly creating = signal(false);
-  protected readonly errorMessage = signal<string | null>(null);
 
   protected newEmail = '';
   protected newPassword = '';
@@ -46,7 +45,6 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
     this.creating.set(true);
     try {
       await this.usersService.create({
@@ -58,7 +56,7 @@ export class UsersComponent implements OnInit {
       this.newPassword = '';
       await this.reload();
     } catch {
-      this.errorMessage.set('No se pudo crear el usuario. Verifica que el correo no esté en uso.');
+      // El interceptor global ya mostró el toast con el motivo del error.
     } finally {
       this.creating.set(false);
     }

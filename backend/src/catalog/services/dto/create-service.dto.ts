@@ -16,13 +16,13 @@ import { CommissionType, ResourceType } from '../../../../generated/prisma';
 
 export class CreateServiceDto {
   @ApiProperty({ example: 'Corte de cabello' })
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'El nombre debe ser texto' })
+  @IsNotEmpty({ message: 'El nombre del servicio es obligatorio' })
   name: string;
 
   @ApiPropertyOptional({ example: 'Corte clásico con máquina y tijera' })
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'La descripción debe ser texto' })
   description?: string;
 
   @ApiPropertyOptional({
@@ -30,16 +30,16 @@ export class CreateServiceDto {
     description: 'Debe pertenecer a tu empresa.',
   })
   @IsOptional()
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'La categoría no es válida' })
+  @IsPositive({ message: 'La categoría no es válida' })
   categoryId?: number;
 
   @ApiProperty({
     example: 30,
     description: 'Duración del servicio en minutos.',
   })
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'La duración debe ser un número entero de minutos' })
+  @IsPositive({ message: 'La duración debe ser mayor a 0' })
   durationMinutes: number;
 
   @ApiPropertyOptional({
@@ -47,13 +47,15 @@ export class CreateServiceDto {
     description: 'Tiempo de preparación/limpieza adicional, en minutos.',
   })
   @IsOptional()
-  @IsInt()
-  @Min(0)
+  @IsInt({
+    message: 'El tiempo de preparación debe ser un número entero de minutos',
+  })
+  @Min(0, { message: 'El tiempo de preparación no puede ser negativo' })
   bufferMinutes?: number;
 
   @ApiProperty({ example: 35000 })
-  @IsNumber()
-  @Min(0)
+  @IsNumber({}, { message: 'El precio debe ser un número' })
+  @Min(0, { message: 'El precio no puede ser negativo' })
   price: number;
 
   @ApiPropertyOptional({
@@ -61,7 +63,9 @@ export class CreateServiceDto {
     example: CommissionType.PERCENTAGE,
   })
   @IsOptional()
-  @IsEnum(CommissionType)
+  @IsEnum(CommissionType, {
+    message: 'El tipo de comisión debe ser porcentaje o valor fijo',
+  })
   commissionType?: CommissionType;
 
   @ApiPropertyOptional({
@@ -70,21 +74,21 @@ export class CreateServiceDto {
       'Si commissionType es PERCENTAGE: 0–100. Si es FIXED: monto en la moneda de la empresa.',
   })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @IsNumber({}, { message: 'La comisión debe ser un número' })
+  @Min(0, { message: 'La comisión no puede ser negativa' })
   @ValidateIf(
     (dto: CreateServiceDto) => dto.commissionType !== CommissionType.FIXED,
   )
-  @Max(100)
+  @Max(100, { message: 'La comisión porcentual no puede ser mayor a 100' })
   commissionValue?: number;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'requiresTwoProfessionals debe ser verdadero o falso' })
   requiresTwoProfessionals?: boolean;
 
   @ApiPropertyOptional({ enum: ResourceType })
   @IsOptional()
-  @IsEnum(ResourceType)
+  @IsEnum(ResourceType, { message: 'El tipo de recurso no es válido' })
   resourceType?: ResourceType;
 }

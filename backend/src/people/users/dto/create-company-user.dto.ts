@@ -11,18 +11,20 @@ export type AssignableCompanyRole = (typeof ASSIGNABLE_COMPANY_ROLES)[number];
 
 export class CreateCompanyUserDto {
   @ApiProperty({ example: 'recepcion@barberia-elegance.com' })
-  @IsEmail()
+  @IsEmail({}, { message: 'El correo no tiene un formato válido' })
   email: string;
 
   @ApiProperty({ example: 'ChangeMe123!' })
-  @IsString()
-  @MinLength(8)
+  @IsString({ message: 'La contraseña es obligatoria' })
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   password: string;
 
   @ApiProperty({
     enum: ASSIGNABLE_COMPANY_ROLES,
     example: Role.RECEPTIONIST_CASHIER,
   })
-  @IsIn(ASSIGNABLE_COMPANY_ROLES)
+  @IsIn(ASSIGNABLE_COMPANY_ROLES, {
+    message: 'El rol debe ser Supervisor o Recepcionista/Cajero',
+  })
   role: AssignableCompanyRole;
 }

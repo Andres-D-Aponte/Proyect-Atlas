@@ -3,6 +3,6 @@ import { IsBoolean } from 'class-validator';
 
 export class SetUserActiveDto {
   @ApiProperty({ example: false })
-  @IsBoolean()
+  @IsBoolean({ message: 'isActive debe ser verdadero o falso' })
   isActive: boolean;
 }

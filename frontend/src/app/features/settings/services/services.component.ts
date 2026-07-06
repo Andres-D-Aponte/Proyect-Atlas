@@ -31,7 +31,6 @@ export class ServicesComponent implements OnInit {
   protected readonly categories = signal<ServiceCategory[]>([]);
   protected readonly services = signal<Service[]>([]);
   protected readonly loading = signal(true);
-  protected readonly errorMessage = signal<string | null>(null);
 
   protected newCategoryName = '';
   protected readonly editingCategoryId = signal<number | null>(null);
@@ -84,13 +83,12 @@ export class ServicesComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
     try {
       await this.catalogService.createCategory(this.newCategoryName.trim());
       this.newCategoryName = '';
       await this.reload();
     } catch {
-      this.errorMessage.set('No se pudo crear la categoría. Verifica que el nombre no esté repetido.');
+      // El interceptor global ya mostró el toast con el motivo del error.
     }
   }
 
@@ -108,13 +106,12 @@ export class ServicesComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
     try {
       await this.catalogService.renameCategory(category.id, this.editingCategoryName.trim());
       this.cancelEditingCategory();
       await this.reload();
     } catch {
-      this.errorMessage.set('No se pudo renombrar la categoría. Verifica que el nombre no esté repetido.');
+      // El interceptor global ya mostró el toast con el motivo del error.
     }
   }
 
@@ -130,14 +127,13 @@ export class ServicesComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
     this.creatingService.set(true);
     try {
       await this.catalogService.createService(this.newService);
       this.newService = emptyServiceDraft();
       await this.reload();
     } catch {
-      this.errorMessage.set('No se pudo crear el servicio. Revisa los datos ingresados.');
+      // El interceptor global ya mostró el toast con el motivo del error.
     } finally {
       this.creatingService.set(false);
     }
@@ -153,13 +149,12 @@ export class ServicesComponent implements OnInit {
   }
 
   async saveService(service: Service): Promise<void> {
-    this.errorMessage.set(null);
     try {
       await this.catalogService.updateService(service.id, this.editingServiceDraft);
       this.cancelEditingService();
       await this.reload();
     } catch {
-      this.errorMessage.set('No se pudo guardar el servicio. Revisa los datos ingresados.');
+      // El interceptor global ya mostró el toast con el motivo del error.
     }
   }
 

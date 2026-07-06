@@ -129,6 +129,20 @@ Cuando el Platform Owner usa "Entrar como Business Admin" (Etapa 3), ahora apare
 
 Por dentro: antes de impersonar, el frontend guarda los tokens del Platform Owner en `localStorage` (`atlas.previousAccessToken` / `atlas.previousRefreshToken`, `AuthService.beginImpersonation`); al volver, `AuthService.exitImpersonation` los restaura y los borra de ese storage temporal. No se necesitó ningún endpoint nuevo en el backend — el JWT original del Platform Owner sigue siendo válido, solo estaba "guardado a un lado".
 
+### Notificaciones de error (toasts)
+
+Cualquier error que devuelva el backend —un campo obligatorio que falta, un correo duplicado, una comisión mayor a 100, un permiso insuficiente, lo que sea— ahora aparece como una notificación (toast) en la esquina superior derecha, con el mensaje real que envió el backend (no un texto genérico inventado por el frontend). Se ve en cualquier pantalla, incluido el login, y se puede cerrar con la ✕ o esperar a que desaparezca sola (los errores duran 8 segundos en pantalla, los avisos de éxito 4).
+
+Por dentro:
+
+- `core/services/notification.service.ts`: guarda la lista de toasts activos (`signal`), con `error()`/`success()`/`info()` y auto-descarte por temporizador.
+- `shared/components/toast-container/`: los pinta; está montado en `app.html` (fuera del `router-outlet`), por eso se ve en toda la app.
+- `core/interceptors/error-notification.interceptor.ts`: un interceptor HTTP global que atrapa **cualquier** error de **cualquier** llamada al backend y llama a `notificationService.error(...)` con el mensaje que venga en el cuerpo de la respuesta (NestJS manda `{ statusCode, message, error }`; `message` es una lista cuando son varias validaciones de `class-validator` a la vez, o un texto simple para errores como "ya existe un usuario con ese correo"). Va registrado **antes** que `authInterceptor` en `app.config.ts` para no mostrar un toast por una renovación de sesión (401) que `authInterceptor` resuelve solo, en silencio, con su refresh automático.
+- Como el toast ahora es automático y global, se quitaron los mensajes de error locales que existían sueltos en varias pantallas (Empresas, Usuarios, Servicios, Login) — antes eran genéricos ("No se pudo crear el usuario...") y no decían el motivo real; ahora el motivo real llega solo, sin que cada pantalla tenga que repetir esa lógica.
+- Todos los DTOs del backend (`backend/src/**/dto/*.dto.ts`) tienen sus mensajes de `class-validator` traducidos al español (antes eran el texto en inglés por defecto de la librería, ej. `"email must be an email"`) — así el toast siempre se lee en español, igual que el resto de la app.
+
+Para verlo tú mismo: intenta crear dos categorías de servicio con el mismo nombre, o un servicio con una comisión porcentual de más de 100 — en ambos casos debe aparecer el toast rojo con el motivo exacto.
+
 ---
 
 ## Cómo ver las tablas y los datos de la base de datos

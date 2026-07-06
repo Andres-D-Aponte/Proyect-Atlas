@@ -3,7 +3,7 @@ import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateCompanyDto {
   @ApiProperty({ example: 'Barbería Elegance' })
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'El nombre debe ser texto' })
+  @IsNotEmpty({ message: 'El nombre de la empresa es obligatorio' })
   name: string;
 }
