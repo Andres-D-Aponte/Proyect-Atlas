@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
@@ -56,4 +57,39 @@ export class UpdateCompanySettingsDto {
     message: 'Uno de los métodos de pago no es válido',
   })
   enabledPaymentMethods?: PaymentMethod[];
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Exigir correo al registrar un cliente.',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'requireClientEmail debe ser verdadero o falso' })
+  requireClientEmail?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Exigir documento al registrar un cliente.',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'requireClientDocument debe ser verdadero o falso' })
+  requireClientDocument?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Exigir dirección al registrar un cliente.',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'requireClientAddress debe ser verdadero o falso' })
+  requireClientAddress?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Permitir reservas sin cliente registrado previamente (lo aplicará la Agenda).',
+  })
+  @IsOptional()
+  @IsBoolean({
+    message: 'allowBookingWithoutClient debe ser verdadero o falso',
+  })
+  allowBookingWithoutClient?: boolean;
 }

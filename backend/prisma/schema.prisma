@@ -118,12 +118,22 @@ model Company {
   /// Por defecto solo efectivo y transferencia (ver PRD sección 4.3).
   enabledPaymentMethods PaymentMethod[] @default([CASH, TRANSFER])
 
+  /// Configuración de Clientes (ver PRD sección 4.6). Estos 3 solo controlan
+  /// qué exige el formulario de alta de `Client`; `allowBookingWithoutClient`
+  /// se guarda desde ya porque es parte del mismo grupo de configuración en
+  /// el PRD, aunque solo lo hará cumplir la Agenda (Etapa 8).
+  requireClientEmail        Boolean @default(false)
+  requireClientDocument     Boolean @default(false)
+  requireClientAddress      Boolean @default(false)
+  allowBookingWithoutClient Boolean @default(true)
+
   users             User[]
   branches          Branch[]
   license           License?
   impersonationLogs ImpersonationLog[]
   serviceCategories ServiceCategory[]
   services          Service[]
+  clients           Client[]
 
   @@map("companies")
 }
@@ -261,4 +271,54 @@ model Service {
   @@index([companyId])
   @@index([categoryId])
   @@map("services")
+}
+
+/// Cliente final del negocio (nunca global, ver PRD sección 3). Si la misma
+/// persona visita otra empresa, es un `Client` completamente distinto aunque
+/// comparta teléfono — el aislamiento por `companyId` ya garantiza esto.
+model Client {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Nombre y teléfono son el único mínimo real (ver backlog Épica 7); correo,
+  /// documento y dirección son opcionales salvo que la empresa los exija
+  /// (`Company.requireClientEmail/Document/Address`) — se valida en el
+  /// servicio, no aquí, porque depende de configuración de otra tabla.
+  name     String
+  phone    String
+  email    String?
+  document String?
+  address  String?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  timelineEvents ClientTimelineEvent[]
+
+  @@index([companyId])
+  @@map("clients")
+}
+
+enum ClientTimelineEventType {
+  CREATED
+  UPDATED
+}
+
+/// Línea de tiempo del cliente (ver backlog Épica 7). Por ahora solo registra
+/// altas y ediciones de sus propios datos; los eventos de citas/ventas
+/// (servicios recibidos, cancelaciones, inasistencias) los añadirán las
+/// Etapas 8 (Agenda) y 10 (Ventas) insertando en esta misma tabla — no hace
+/// falta ni se puede modelar su forma todavía (Regla de Oro del roadmap).
+model ClientTimelineEvent {
+  id          Int                     @id @default(autoincrement())
+  clientId    Int
+  client      Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type        ClientTimelineEventType
+  description String
+  createdAt   DateTime                @default(now())
+
+  @@index([clientId])
+  @@map("client_timeline_events")
 }

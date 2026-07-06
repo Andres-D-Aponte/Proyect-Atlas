@@ -59,6 +59,10 @@ export interface CompanySettings {
   currency: string;
   language: string;
   enabledPaymentMethods: PaymentMethod[];
+  requireClientEmail: boolean;
+  requireClientDocument: boolean;
+  requireClientAddress: boolean;
+  allowBookingWithoutClient: boolean;
 }
 
 export interface UpdateCompanySettings {
@@ -68,6 +72,10 @@ export interface UpdateCompanySettings {
   currency?: string;
   language?: string;
   enabledPaymentMethods?: PaymentMethod[];
+  requireClientEmail?: boolean;
+  requireClientDocument?: boolean;
+  requireClientAddress?: boolean;
+  allowBookingWithoutClient?: boolean;
 }
 
 export interface OpeningHour {

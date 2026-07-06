@@ -43,6 +43,10 @@ export class CompanySettingsComponent implements OnInit {
     timezone: ['America/Bogota'],
     currency: ['COP'],
     language: ['es'],
+    requireClientEmail: [false],
+    requireClientDocument: [false],
+    requireClientAddress: [false],
+    allowBookingWithoutClient: [true],
   });
 
   protected readonly selectedPaymentMethods = signal<Set<PaymentMethod>>(new Set());
@@ -56,6 +60,10 @@ export class CompanySettingsComponent implements OnInit {
       timezone: settings.timezone,
       currency: settings.currency,
       language: settings.language,
+      requireClientEmail: settings.requireClientEmail,
+      requireClientDocument: settings.requireClientDocument,
+      requireClientAddress: settings.requireClientAddress,
+      allowBookingWithoutClient: settings.allowBookingWithoutClient,
     });
     this.selectedPaymentMethods.set(new Set(settings.enabledPaymentMethods));
     this.loading.set(false);
@@ -87,6 +95,10 @@ export class CompanySettingsComponent implements OnInit {
       currency: raw.currency || undefined,
       language: raw.language || undefined,
       enabledPaymentMethods: Array.from(this.selectedPaymentMethods()),
+      requireClientEmail: raw.requireClientEmail ?? undefined,
+      requireClientDocument: raw.requireClientDocument ?? undefined,
+      requireClientAddress: raw.requireClientAddress ?? undefined,
+      allowBookingWithoutClient: raw.allowBookingWithoutClient ?? undefined,
     });
 
     this.saving.set(false);

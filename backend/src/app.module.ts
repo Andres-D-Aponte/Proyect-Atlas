@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CatalogModule } from './catalog/catalog.module';
+import { ClientsModule } from './clients/clients.module';
 import { AuthModule } from './people/auth/auth.module';
 import { UsersModule } from './people/users/users.module';
 import { PlatformModule } from './platform/platform.module';
@@ -20,6 +21,7 @@ import { TenancyModule } from './shared/tenancy/tenancy.module';
     PlatformModule,
     SettingsModule,
     CatalogModule,
+    ClientsModule,
   ],
 })
 export class AppModule {}

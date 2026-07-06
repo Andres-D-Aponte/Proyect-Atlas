@@ -1,0 +1,163 @@
+<app-shell
+  title="Clientes"
+  subtitle="Base de clientes de tu empresa"
+  [userEmail]="authService.currentUser()?.email ?? null"
+  [showLogout]="true"
+  (logout)="logout()"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
+>
+  <section class="create-form client-form">
+    <h2>Nuevo cliente</h2>
+    <div class="client-grid">
+      <label>
+        Nombre
+        <input type="text" [(ngModel)]="newClient.name" name="newClientName" />
+      </label>
+      <label>
+        Teléfono
+        <input type="text" [(ngModel)]="newClient.phone" name="newClientPhone" />
+      </label>
+      <label>
+        Correo
+        <input type="email" [(ngModel)]="newClient.email" name="newClientEmail" />
+      </label>
+      <label>
+        Documento
+        <input type="text" [(ngModel)]="newClient.document" name="newClientDocument" />
+      </label>
+      <label>
+        Dirección
+        <input type="text" [(ngModel)]="newClient.address" name="newClientAddress" />
+      </label>
+      <label class="notes-field">
+        Notas
+        <input type="text" [(ngModel)]="newClient.notes" name="newClientNotes" />
+      </label>
+    </div>
+    <button type="button" [disabled]="creating()" (click)="createClient()">
+      @if (creating()) {
+        <span class="spinner"></span> Creando…
+      } @else {
+        + Crear cliente
+      }
+    </button>
+  </section>
+
+  <div class="search-bar">
+    <input
+      type="text"
+      placeholder="Buscar por nombre, teléfono o correo…"
+      [(ngModel)]="searchTerm"
+      name="searchTerm"
+      (keyup.enter)="search()"
+    />
+    <button type="button" class="btn-secondary" (click)="search()">Buscar</button>
+  </div>
+
+  @if (loading()) {
+    <p><span class="spinner"></span> Cargando…</p>
+  } @else if (clients().length === 0) {
+    <div class="empty-state">Todavía no hay clientes registrados.</div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Correo</th>
+            <th>Documento</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (client of clients(); track client.id) {
+            <tr>
+              <td>{{ client.name }}</td>
+              <td>{{ client.phone }}</td>
+              <td>{{ client.email || '—' }}</td>
+              <td>{{ client.document || '—' }}</td>
+              <td class="actions-cell">
+                <button type="button" class="btn-secondary" (click)="toggleTimeline(client)">
+                  Ver historial
+                </button>
+                <button type="button" class="btn-secondary" (click)="startEditing(client)">
+                  Editar
+                </button>
+              </td>
+            </tr>
+
+            @if (editingClientId() === client.id) {
+              <tr class="client-edit-row">
+                <td colspan="5">
+                  <div class="client-grid">
+                    <label>
+                      Nombre
+                      <input type="text" [(ngModel)]="editingDraft.name" name="editClientName" />
+                    </label>
+                    <label>
+                      Teléfono
+                      <input type="text" [(ngModel)]="editingDraft.phone" name="editClientPhone" />
+                    </label>
+                    <label>
+                      Correo
+                      <input type="email" [(ngModel)]="editingDraft.email" name="editClientEmail" />
+                    </label>
+                    <label>
+                      Documento
+                      <input
+                        type="text"
+                        [(ngModel)]="editingDraft.document"
+                        name="editClientDocument"
+                      />
+                    </label>
+                    <label>
+                      Dirección
+                      <input
+                        type="text"
+                        [(ngModel)]="editingDraft.address"
+                        name="editClientAddress"
+                      />
+                    </label>
+                    <label class="notes-field">
+                      Notas
+                      <input type="text" [(ngModel)]="editingDraft.notes" name="editClientNotes" />
+                    </label>
+                  </div>
+                  <div class="schedule-actions">
+                    <button type="button" (click)="saveClient(client)">Guardar</button>
+                    <button type="button" class="btn-ghost" (click)="cancelEditing()">
+                      Cancelar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+
+            @if (viewingTimelineForId() === client.id) {
+              <tr class="client-timeline-row">
+                <td colspan="5">
+                  @if (loadingTimeline()) {
+                    <p><span class="spinner"></span> Cargando historial…</p>
+                  } @else if (timelineEvents().length === 0) {
+                    <p class="empty-hint">Sin eventos todavía.</p>
+                  } @else {
+                    <ul class="timeline-list">
+                      @for (event of timelineEvents(); track event.id) {
+                        <li>
+                          <span class="badge badge-muted">{{ event.createdAt | date: 'short' }}</span>
+                          {{ event.description }}
+                        </li>
+                      }
+                    </ul>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</app-shell>

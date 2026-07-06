@@ -12,6 +12,7 @@
     <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
     <a routerLink="/settings/users" routerLinkActive="active">Usuarios</a>
     <a routerLink="/settings/services" routerLinkActive="active">Servicios</a>
+    <a routerLink="/clients" routerLinkActive="active">Clientes</a>
   </nav>
 
   @if (loading()) {
@@ -71,6 +72,28 @@
               {{ paymentMethodLabels[method] }}
             </label>
           }
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Clientes</legend>
+        <div class="checkbox-grid">
+          <label class="checkbox">
+            <input type="checkbox" formControlName="requireClientEmail" />
+            Exigir correo al registrar un cliente
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" formControlName="requireClientDocument" />
+            Exigir documento al registrar un cliente
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" formControlName="requireClientAddress" />
+            Exigir dirección al registrar un cliente
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" formControlName="allowBookingWithoutClient" />
+            Permitir reservas sin cliente registrado
+          </label>
         </div>
       </fieldset>
 

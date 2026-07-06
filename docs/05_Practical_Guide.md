@@ -529,3 +529,39 @@ npm run lint
 npm run build
 npm test -- --watch=false
 ```
+
+---
+
+### Etapa 7 — Clientes
+
+**Qué se construyó:** la base de clientes de cada empresa (nombre y teléfono como mínimo, correo/documento/dirección si la empresa los exige) con una línea de tiempo que registra automáticamente altas y ediciones. Es el primer módulo que usan de verdad los roles Supervisor y Recepcionista/Cajero — antes de esta etapa esos usuarios podían iniciar sesión pero no tenían ninguna pantalla propia a la que llegar. Detalle completo en [`docs/modules/07_clientes.md`](modules/07_clientes.md).
+
+**Paso a paso para probarlo tú mismo, desde cero, usando el navegador:**
+
+1. Levanta el entorno si no lo tenías arriba: `docker compose up -d --build`.
+2. Entra como Business Admin de una empresa (impersonando, o con tu propio login real).
+3. Ve a la pestaña **Clientes** (nueva, al final de la barra) y activa "Exigir correo al registrar un cliente" en la pestaña **Empresa** para probar la validación — luego intenta crear un cliente sin correo en la pestaña Clientes: debe rechazarlo con un toast rojo explicando el motivo. Desactívalo de nuevo si no quieres que te estorbe.
+4. Crea un cliente con nombre y teléfono (y correo si lo dejaste obligatorio).
+5. Busca ese cliente por nombre o teléfono en el buscador de arriba de la tabla.
+6. Haz clic en "Editar", cambia el teléfono, guarda — y luego haz clic en "Ver historial": debes ver dos eventos, "Cliente registrado." y "Datos actualizados: teléfono.", el más reciente primero.
+7. (Opcional, para ver el nuevo destino de login por rol) Desde el panel de Empresas del Platform Owner, crea un usuario Recepcionista/Cajero (pestaña Usuarios), cierra sesión, entra con ese correo — debes caer directo en `/clients` en vez de una pantalla de Configuración a la que no tendría acceso.
+
+**Qué mirar en la base de datos:**
+
+- Tabla `companies`: las 4 columnas nuevas (`require_client_email`, `require_client_document`, `require_client_address`, `allow_booking_without_client`).
+- Tabla `clients`: el cliente creado, con `email`/`document`/`address` en `NULL` si no los llenaste.
+- Tabla `client_timeline_events`: un evento `CREATED` y, tras editar, uno `UPDATED` con la descripción de qué cambió.
+
+**Pruebas automatizadas de esta etapa:**
+
+```bash
+cd backend
+npm test          # 9 pruebas nuevas (77 en total): ClientsService (validación de campos obligatorios, aislamiento, búsqueda, línea de tiempo)
+docker compose up -d postgres
+npx jest --config ./test/jest-e2e.json --runInBand  # 6 pruebas nuevas (45 en total)
+
+cd ../frontend
+npm run lint
+npm run build
+npm test -- --watch=false
+```

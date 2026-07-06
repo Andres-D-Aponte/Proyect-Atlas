@@ -1,8 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Role } from '../../../core/models/auth.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
+
+/** A dónde cae cada rol justo después de iniciar sesión. */
+const LANDING_ROUTE_BY_ROLE: Partial<Record<Role, string>> = {
+  PLATFORM_OWNER: '/platform/companies',
+  BUSINESS_ADMIN: '/settings/company',
+};
+const DEFAULT_LANDING_ROUTE = '/clients';
 
 @Component({
   selector: 'app-login',
@@ -35,9 +43,8 @@ export class LoginComponent {
     try {
       await this.authService.login(email ?? '', password ?? '');
       const user = this.authService.currentUser();
-      await this.router.navigateByUrl(
-        user?.role === 'PLATFORM_OWNER' ? '/platform/companies' : '/settings/company',
-      );
+      const destination = (user && LANDING_ROUTE_BY_ROLE[user.role]) || DEFAULT_LANDING_ROUTE;
+      await this.router.navigateByUrl(destination);
     } catch {
       // El interceptor global ya mostró el toast con el motivo del error.
     } finally {

@@ -205,10 +205,37 @@ try {
     if (index !== -1) consoleErrors.splice(index, 1);
   }
 
-  step('20) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
+  step('20) Crear un cliente desde la pestaña Clientes');
+  await page.click('a:has-text("Clientes")');
+  await page.waitForURL('**/clients');
+  await page.fill('input[name=newClientName]', 'Cliente Browser Check');
+  await page.fill('input[name=newClientPhone]', '3001112222');
+  await page.click('button:has-text("+ Crear cliente")');
+  await page.waitForSelector('text=Cliente Browser Check');
+  await shot('20-client-created');
+
+  step('21) Buscar el cliente y ver su historial (evento de alta)');
+  await page.fill('input[name=searchTerm]', 'Browser Check');
+  await page.click('button:has-text("Buscar")');
+  await page.waitForSelector('text=Cliente Browser Check');
+  const clientRow = page.locator('tr', { hasText: 'Cliente Browser Check' });
+  await clientRow.locator('button:has-text("Ver historial")').click();
+  await page.waitForSelector('text=Cliente registrado.');
+  await shot('21-client-timeline-created');
+
+  step('22) Editar el cliente y confirmar el nuevo evento en el historial');
+  await clientRow.locator('button:has-text("Editar")').click();
+  await page.fill('input[name=editClientPhone]', '3009998888');
+  await page.locator('tr.client-edit-row').locator('button:has-text("Guardar")').click();
+  await page.waitForSelector('text=3009998888');
+  await clientRow.locator('button:has-text("Ver historial")').click();
+  await page.waitForSelector('text=Datos actualizados: teléfono.');
+  await shot('22-client-timeline-updated');
+
+  step('23) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
   await page.click('button:has-text("Salir")');
   await page.waitForURL('**/login');
-  await shot('20-logout-from-business-admin-screen');
+  await shot('23-logout-from-business-admin-screen');
 
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');
