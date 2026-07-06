@@ -468,3 +468,38 @@ npm run lint
 npm run build
 npm test -- --watch=false
 ```
+
+---
+
+### Etapa 6 — Servicios
+
+**Qué se construyó:** el catálogo de servicios de cada empresa: categorías propias (con el mismo nombre permitido entre empresas distintas, no dentro de la misma), y servicios con duración, tiempo de preparación (buffer), precio, comisión (porcentaje o valor fijo, con equivalencia calculada en vivo) y si requieren dos profesionales o un tipo de recurso físico (sala, silla, cabina, máquina, camilla). Detalle completo en [`docs/modules/06_servicios.md`](modules/06_servicios.md).
+
+**Paso a paso para probarlo tú mismo, desde cero, usando el navegador:**
+
+1. Levanta el entorno si no lo tenías arriba: `docker compose up -d --build`.
+2. Entra como Business Admin de alguna empresa (impersonando desde el panel de Empresas, o con el login real que creaste en la Etapa 5).
+3. Ve a la pestaña **Servicios** (junto a Empresa, Sucursales y Usuarios).
+4. En la sección "Categorías", crea una categoría (ej. "Cortes"). Puedes renombrarla (✎) o borrarla (✕) — bórrala y comprueba que no rompe nada (los servicios que la usaban simplemente quedan sin categoría).
+5. Llena el formulario "Nuevo servicio": nombre, categoría, duración, tiempo de preparación, precio, comisión (elige % o Fijo y escribe un valor — fíjate que aparece "≈ ..." con la equivalencia calculada), y opcionalmente marca "Requiere dos profesionales" o selecciona un recurso requerido. Presiona "+ Crear servicio".
+6. En la tabla, haz clic en "Editar" sobre el servicio recién creado, cambia el precio y guarda — confirma que la tabla refleja el cambio.
+7. Haz clic en "Desactivar" — el estado debe cambiar a "Inactivo" en la tabla, sin desaparecer de la lista.
+
+**Qué mirar en la base de datos:**
+
+- Tabla `service_categories`: la categoría creada, con su `companyId`.
+- Tabla `services`: el servicio con todos sus campos — fíjate que `price` y `commission_value` se guardan como números simples (no como texto), y que `category_id` queda en `NULL` si borraste la categoría en el paso 4.
+
+**Pruebas automatizadas de esta etapa:**
+
+```bash
+cd backend
+npm test          # 15 pruebas nuevas (82 en total): CategoriesService, ServicesService (conflictos, aislamiento, validación de categoría cruzada)
+docker compose up -d postgres
+npx jest --config ./test/jest-e2e.json --runInBand  # 10 pruebas nuevas (38 en total)
+
+cd ../frontend
+npm run lint
+npm run build
+npm test -- --watch=false
+```

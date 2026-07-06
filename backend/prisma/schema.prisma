@@ -45,6 +45,24 @@ enum PaymentMethod {
   OTHER
 }
 
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+}
+
+/// Tipo genérico de recurso físico reservable (ver PRD sección 3). El
+/// inventario concreto (qué salas/sillas existen en cada sucursal) se
+/// construirá en la Etapa 8 (Agenda), que es la primera que realmente
+/// necesita reservarlos; por ahora un Service solo declara qué *tipo* de
+/// recurso requiere, si aplica.
+enum ResourceType {
+  ROOM
+  CHAIR
+  CABIN
+  MACHINE
+  STRETCHER
+}
+
 /// Llaves primarias: numéricas seriales autoincrementales (`Int @id @default(autoincrement())`),
 /// no UUID. Decisión explícita del dueño del producto.
 model User {
@@ -104,6 +122,8 @@ model Company {
   branches          Branch[]
   license           License?
   impersonationLogs ImpersonationLog[]
+  serviceCategories ServiceCategory[]
+  services          Service[]
 
   @@map("companies")
 }
@@ -185,4 +205,60 @@ model ImpersonationLog {
 
   @@index([companyId])
   @@map("impersonation_logs")
+}
+
+/// Categoría de servicios, propia de cada empresa (nunca global). Dos
+/// empresas distintas pueden usar el mismo nombre sin conflicto; dentro de
+/// la misma empresa, no se permiten nombres repetidos.
+model ServiceCategory {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services Service[]
+
+  @@unique([companyId, name])
+  @@map("service_categories")
+}
+
+/// Servicio ofrecido por una empresa (nunca global, ver PRD sección 3).
+/// `price` y `commissionValue` usan Float (no Decimal) a propósito: Atlas no
+/// es un libro contable de precisión bancaria en el MVP (ver Project
+/// Charter), y Decimal en Prisma se serializa como string en JSON, lo que
+/// complica al frontend sin aportar nada real en esta etapa.
+model Service {
+  id         Int              @id @default(autoincrement())
+  companyId  Int
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categoryId Int?
+  /// Nula si la categoría fue borrada; el servicio no desaparece con ella.
+  category   ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  name        String
+  description String?
+
+  durationMinutes Int
+  /// Tiempo de preparación/limpieza adicional después del servicio (ver PRD sección 4.2).
+  bufferMinutes   Int @default(0)
+
+  price Float
+
+  commissionType  CommissionType @default(PERCENTAGE)
+  /// Si `commissionType` es PERCENTAGE, valor entre 0 y 100; si es FIXED, monto en la moneda de la empresa.
+  commissionValue Float          @default(0)
+
+  requiresTwoProfessionals Boolean       @default(false)
+  /// Tipo de recurso que exige este servicio (ver comentario del enum ResourceType); nulo = no requiere ninguno.
+  resourceType             ResourceType?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([categoryId])
+  @@map("services")
 }

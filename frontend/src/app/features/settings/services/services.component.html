@@ -1,0 +1,335 @@
+<app-shell
+  title="Servicios"
+  subtitle="Catálogo de servicios de tu empresa"
+  [userEmail]="authService.currentUser()?.email ?? null"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
+>
+  <nav class="tabs" shell-tabs>
+    <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
+    <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
+    <a routerLink="/settings/users" routerLinkActive="active">Usuarios</a>
+    <a routerLink="/settings/services" routerLinkActive="active">Servicios</a>
+  </nav>
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+
+  @if (loading()) {
+    <p><span class="spinner"></span> Cargando…</p>
+  } @else {
+    <section class="card categories-card">
+      <h2>Categorías</h2>
+      <div class="category-list">
+        @for (category of categories(); track category.id) {
+          @if (editingCategoryId() === category.id) {
+            <div class="category-edit">
+              <input type="text" [(ngModel)]="editingCategoryName" name="editingCategoryName" />
+              <button type="button" (click)="saveCategory(category)">Guardar</button>
+              <button type="button" class="btn-ghost" (click)="cancelEditingCategory()">
+                Cancelar
+              </button>
+            </div>
+          } @else {
+            <span class="badge category-badge">
+              {{ category.name }}
+              <button
+                type="button"
+                class="badge-action"
+                title="Renombrar"
+                (click)="startEditingCategory(category)"
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                class="badge-action"
+                title="Eliminar"
+                (click)="deleteCategory(category)"
+              >
+                ✕
+              </button>
+            </span>
+          }
+        } @empty {
+          <span class="empty-hint">Todavía no hay categorías.</span>
+        }
+      </div>
+      <div class="create-form category-create-form">
+        <input
+          type="text"
+          placeholder="Nueva categoría"
+          [(ngModel)]="newCategoryName"
+          name="newCategoryName"
+        />
+        <button type="button" (click)="createCategory()">+ Crear categoría</button>
+      </div>
+    </section>
+
+    <section class="create-form service-form">
+      <h2>Nuevo servicio</h2>
+      <div class="service-grid">
+        <label>
+          Nombre
+          <input type="text" [(ngModel)]="newService.name" name="newServiceName" />
+        </label>
+        <label>
+          Categoría
+          <select [(ngModel)]="newService.categoryId" name="newServiceCategory">
+            <option [ngValue]="null">Sin categoría</option>
+            @for (category of categories(); track category.id) {
+              <option [ngValue]="category.id">{{ category.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Duración (min)
+          <input
+            type="number"
+            min="1"
+            [(ngModel)]="newService.durationMinutes"
+            name="newServiceDuration"
+          />
+        </label>
+        <label>
+          Preparación/limpieza (min)
+          <input
+            type="number"
+            min="0"
+            [(ngModel)]="newService.bufferMinutes"
+            name="newServiceBuffer"
+          />
+        </label>
+        <label>
+          Precio
+          <input type="number" min="0" [(ngModel)]="newService.price" name="newServicePrice" />
+        </label>
+        <label class="commission-field">
+          Comisión
+          <div class="commission-input">
+            <select [(ngModel)]="newService.commissionType" name="newServiceCommissionType">
+              <option value="PERCENTAGE">%</option>
+              <option value="FIXED">Fijo</option>
+            </select>
+            <input
+              type="number"
+              min="0"
+              [(ngModel)]="newService.commissionValue"
+              name="newServiceCommissionValue"
+            />
+          </div>
+          @if (commissionEquivalentLabel(newService); as equivalent) {
+            <span class="commission-equivalent">{{ equivalent }}</span>
+          }
+        </label>
+        <label>
+          Recurso requerido
+          <select [(ngModel)]="newService.resourceType" name="newServiceResourceType">
+            <option value="">Ninguno</option>
+            @for (option of resourceTypeOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="checkbox">
+          <input
+            type="checkbox"
+            [(ngModel)]="newService.requiresTwoProfessionals"
+            name="newServiceTwoProfessionals"
+          />
+          Requiere dos profesionales
+        </label>
+        <label class="description-field">
+          Descripción (opcional)
+          <input type="text" [(ngModel)]="newService.description" name="newServiceDescription" />
+        </label>
+      </div>
+      <button type="button" [disabled]="creatingService()" (click)="createService()">
+        @if (creatingService()) {
+          <span class="spinner"></span> Creando…
+        } @else {
+          + Crear servicio
+        }
+      </button>
+    </section>
+
+    @if (services().length === 0) {
+      <div class="empty-state">Todavía no hay servicios creados.</div>
+    } @else {
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Duración</th>
+              <th>Precio</th>
+              <th>Comisión</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (service of services(); track service.id) {
+              @if (editingServiceId() === service.id) {
+                <tr class="service-edit-row">
+                  <td colspan="7">
+                    <div class="service-grid">
+                      <label>
+                        Nombre
+                        <input
+                          type="text"
+                          [(ngModel)]="editingServiceDraft.name"
+                          name="editServiceName"
+                        />
+                      </label>
+                      <label>
+                        Categoría
+                        <select
+                          [(ngModel)]="editingServiceDraft.categoryId"
+                          name="editServiceCategory"
+                        >
+                          <option [ngValue]="null">Sin categoría</option>
+                          @for (category of categories(); track category.id) {
+                            <option [ngValue]="category.id">{{ category.name }}</option>
+                          }
+                        </select>
+                      </label>
+                      <label>
+                        Duración (min)
+                        <input
+                          type="number"
+                          min="1"
+                          [(ngModel)]="editingServiceDraft.durationMinutes"
+                          name="editServiceDuration"
+                        />
+                      </label>
+                      <label>
+                        Preparación/limpieza (min)
+                        <input
+                          type="number"
+                          min="0"
+                          [(ngModel)]="editingServiceDraft.bufferMinutes"
+                          name="editServiceBuffer"
+                        />
+                      </label>
+                      <label>
+                        Precio
+                        <input
+                          type="number"
+                          min="0"
+                          [(ngModel)]="editingServiceDraft.price"
+                          name="editServicePrice"
+                        />
+                      </label>
+                      <label class="commission-field">
+                        Comisión
+                        <div class="commission-input">
+                          <select
+                            [(ngModel)]="editingServiceDraft.commissionType"
+                            name="editServiceCommissionType"
+                          >
+                            <option value="PERCENTAGE">%</option>
+                            <option value="FIXED">Fijo</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="0"
+                            [(ngModel)]="editingServiceDraft.commissionValue"
+                            name="editServiceCommissionValue"
+                          />
+                        </div>
+                        @if (commissionEquivalentLabel(editingServiceDraft); as equivalent) {
+                          <span class="commission-equivalent">{{ equivalent }}</span>
+                        }
+                      </label>
+                      <label>
+                        Recurso requerido
+                        <select
+                          [(ngModel)]="editingServiceDraft.resourceType"
+                          name="editServiceResourceType"
+                        >
+                          <option value="">Ninguno</option>
+                          @for (option of resourceTypeOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
+                      </label>
+                      <label class="checkbox">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="editingServiceDraft.requiresTwoProfessionals"
+                          name="editServiceTwoProfessionals"
+                        />
+                        Requiere dos profesionales
+                      </label>
+                      <label class="description-field">
+                        Descripción (opcional)
+                        <input
+                          type="text"
+                          [(ngModel)]="editingServiceDraft.description"
+                          name="editServiceDescription"
+                        />
+                      </label>
+                    </div>
+                    <div class="schedule-actions">
+                      <button type="button" (click)="saveService(service)">Guardar</button>
+                      <button type="button" class="btn-ghost" (click)="cancelEditingService()">
+                        Cancelar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td>{{ service.name }}</td>
+                  <td>
+                    @if (service.category) {
+                      <span class="badge badge-muted">{{ service.category.name }}</span>
+                    } @else {
+                      <span class="text-subtle">—</span>
+                    }
+                  </td>
+                  <td>
+                    {{ service.durationMinutes }} min
+                    @if (service.bufferMinutes) {
+                      <span class="text-subtle">+ {{ service.bufferMinutes }} min prep</span>
+                    }
+                  </td>
+                  <td>{{ service.price.toLocaleString('es-CO') }}</td>
+                  <td>
+                    @if (service.commissionType === 'PERCENTAGE') {
+                      {{ service.commissionValue }}%
+                    } @else {
+                      {{ service.commissionValue.toLocaleString('es-CO') }} fijo
+                    }
+                  </td>
+                  <td>
+                    @if (service.isActive) {
+                      <span class="badge">Activo</span>
+                    } @else {
+                      <span class="badge badge-muted">Inactivo</span>
+                    }
+                  </td>
+                  <td class="actions-cell">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      (click)="startEditingService(service)"
+                    >
+                      Editar
+                    </button>
+                    <button type="button" class="btn-secondary" (click)="toggleActive(service)">
+                      {{ service.isActive ? 'Desactivar' : 'Reactivar' }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</app-shell>

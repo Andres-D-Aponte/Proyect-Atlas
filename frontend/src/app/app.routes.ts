@@ -6,6 +6,7 @@ import { CompaniesComponent } from './features/platform/companies/companies.comp
 import { CompanySettingsComponent } from './features/settings/company/company-settings.component';
 import { BranchesComponent } from './features/settings/branches/branches.component';
 import { UsersComponent } from './features/settings/users/users.component';
+import { ServicesComponent } from './features/settings/services/services.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -27,6 +28,11 @@ export const routes: Routes = [
   {
     path: 'settings/users',
     component: UsersComponent,
+    canActivate: [authGuard, roleGuard(['BUSINESS_ADMIN'])],
+  },
+  {
+    path: 'settings/services',
+    component: ServicesComponent,
     canActivate: [authGuard, roleGuard(['BUSINESS_ADMIN'])],
   },
   { path: '', redirectTo: 'login', pathMatch: 'full' },

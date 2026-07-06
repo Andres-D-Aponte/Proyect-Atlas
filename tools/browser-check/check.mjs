@@ -142,6 +142,43 @@ try {
   await staffRow.locator('text=Inactivo').waitFor();
   await shot('12-user-deactivated');
 
+  step('13) Crear una categoría de servicio');
+  await page.click('a:has-text("Servicios")');
+  await page.waitForURL('**/settings/services');
+  await page.fill('input[placeholder="Nueva categoría"]', 'Cortes');
+  await page.click('button:has-text("+ Crear categoría")');
+  await page.waitForSelector('.category-badge:has-text("Cortes")');
+  await shot('13-category-created');
+
+  step('14) Llenar el formulario de servicio y verificar la equivalencia de comisión en vivo');
+  await page.fill('input[name=newServiceName]', 'Masaje relajante');
+  await page.selectOption('select[name=newServiceCategory]', { label: 'Cortes' });
+  await page.fill('input[name=newServiceDuration]', '60');
+  await page.fill('input[name=newServiceBuffer]', '15');
+  await page.fill('input[name=newServicePrice]', '90000');
+  await page.fill('input[name=newServiceCommissionValue]', '20');
+  await page.selectOption('select[name=newServiceResourceType]', 'ROOM');
+  await page.waitForSelector('text=≈ 18.000 fijo'); // 90.000 × 20% — confirma el cálculo en vivo
+  await shot('14-service-form-with-commission-equivalence');
+
+  step('15) Crear el servicio');
+  await page.click('button:has-text("+ Crear servicio")');
+  await page.waitForSelector('text=Masaje relajante');
+  await shot('15-service-created');
+
+  step('16) Editar el servicio (cambiar el precio) y guardar');
+  const serviceRow = page.locator('tr', { hasText: 'Masaje relajante' });
+  await serviceRow.locator('button:has-text("Editar")').click();
+  await page.fill('input[name=editServicePrice]', '95000');
+  await page.locator('tr.service-edit-row').locator('button:has-text("Guardar")').click();
+  await page.waitForSelector('text=95.000');
+  await shot('16-service-edited');
+
+  step('17) Desactivar el servicio');
+  await serviceRow.locator('button:has-text("Desactivar")').click();
+  await serviceRow.locator('text=Inactivo').waitFor();
+  await shot('17-service-deactivated');
+
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');
   console.log('Errores de página:', pageErrors.length ? pageErrors : 'ninguno');
