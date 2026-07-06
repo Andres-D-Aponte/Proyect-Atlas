@@ -2,6 +2,8 @@
   title="Configuración"
   [subtitle]="companyName"
   [userEmail]="authService.currentUser()?.email ?? null"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
 >
   <nav class="tabs" shell-tabs>
     <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>

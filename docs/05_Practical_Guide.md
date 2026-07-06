@@ -123,6 +123,12 @@ En la configuración de empresa, específicamente:
 - **Color principal**: un selector de color nativo del navegador (la típica rueda/paleta del sistema operativo) en vez de escribir un código hexadecimal a mano — al lado se muestra el código capturado, por si lo necesitas para otra cosa.
 - **Métodos de pago**: casillas con nombres en español (Efectivo, Transferencia, Nequi...) en vez de los nombres técnicos en inglés que usa la base de datos.
 
+### Volver al panel de plataforma tras impersonar
+
+Cuando el Platform Owner usa "Entrar como Business Admin" (Etapa 3), ahora aparece una barra amarilla fija debajo del encabezado, en todas las pantallas de configuración: **"Estás viendo la aplicación como Business Admin de esta empresa. ← Volver al panel de plataforma"**. Al hacer clic, se restaura la sesión original del Platform Owner (sin pedir contraseña de nuevo) y se regresa a `/platform/companies`.
+
+Por dentro: antes de impersonar, el frontend guarda los tokens del Platform Owner en `localStorage` (`atlas.previousAccessToken` / `atlas.previousRefreshToken`, `AuthService.beginImpersonation`); al volver, `AuthService.exitImpersonation` los restaura y los borra de ese storage temporal. No se necesitó ningún endpoint nuevo en el backend — el JWT original del Platform Owner sigue siendo válido, solo estaba "guardado a un lado".
+
 ---
 
 ## Cómo ver las tablas y los datos de la base de datos

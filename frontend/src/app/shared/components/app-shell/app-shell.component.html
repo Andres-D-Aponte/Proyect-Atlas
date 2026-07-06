@@ -15,6 +15,15 @@
   </div>
 </header>
 
+@if (impersonating) {
+  <div class="impersonation-banner">
+    <span>🕵️ Estás viendo la aplicación como Business Admin de esta empresa.</span>
+    <button type="button" class="btn-ghost" (click)="exitImpersonation.emit()">
+      ← Volver al panel de plataforma
+    </button>
+  </div>
+}
+
 <main class="app-shell-main">
   <div class="page-header">
     <div>

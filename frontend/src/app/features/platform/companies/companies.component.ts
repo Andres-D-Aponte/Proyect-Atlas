@@ -59,7 +59,7 @@ export class CompaniesComponent implements OnInit {
     this.errorMessage.set(null);
     try {
       const tokens = await this.platformService.impersonate(company.id, reason.trim());
-      await this.authService.useTokens(tokens);
+      await this.authService.beginImpersonation(tokens);
       await this.router.navigateByUrl('/settings/company');
     } catch {
       this.errorMessage.set('No se pudo impersonar la empresa.');

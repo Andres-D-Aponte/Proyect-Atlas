@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { Branch, OpeningHour } from '../../../core/models/settings.model';
@@ -17,6 +17,7 @@ const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vierne
 })
 export class BranchesComponent implements OnInit {
   private readonly settingsService = inject(SettingsService);
+  private readonly router = inject(Router);
   protected readonly authService = inject(AuthService);
 
   protected readonly dayNames = DAY_NAMES;
@@ -88,5 +89,10 @@ export class BranchesComponent implements OnInit {
     await this.settingsService.setBranchSchedule(branchId, this.draftSchedule());
     this.cancelSchedule();
     await this.reload();
+  }
+
+  async exitImpersonation(): Promise<void> {
+    await this.authService.exitImpersonation();
+    await this.router.navigateByUrl('/platform/companies');
   }
 }

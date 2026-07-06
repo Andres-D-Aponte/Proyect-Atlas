@@ -1,4 +1,9 @@
-<app-shell title="Sucursales" [userEmail]="authService.currentUser()?.email ?? null">
+<app-shell
+  title="Sucursales"
+  [userEmail]="authService.currentUser()?.email ?? null"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
+>
   <nav class="tabs" shell-tabs>
     <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
     <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>

@@ -6,6 +6,8 @@ import { AuthTokens, CurrentUser } from '../models/auth.model';
 
 const ACCESS_TOKEN_KEY = 'atlas.accessToken';
 const REFRESH_TOKEN_KEY = 'atlas.refreshToken';
+const PREVIOUS_ACCESS_TOKEN_KEY = 'atlas.previousAccessToken';
+const PREVIOUS_REFRESH_TOKEN_KEY = 'atlas.previousRefreshToken';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -18,6 +20,7 @@ export class AuthService {
 
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.accessTokenSignal() !== null);
+  readonly isImpersonating = computed(() => this.currentUserSignal()?.impersonatedBy != null);
 
   get accessToken(): string | null {
     return this.accessTokenSignal();
@@ -41,9 +44,33 @@ export class AuthService {
     return user;
   }
 
-  /** Cambia de sesión sin pasar por login: usado tras impersonar una empresa. */
-  async useTokens(tokens: AuthTokens): Promise<void> {
+  /** Cambia a la sesión de una empresa impersonada, guardando antes los tokens
+   *  del Platform Owner para poder restaurarlos con `exitImpersonation()`. */
+  async beginImpersonation(tokens: AuthTokens): Promise<void> {
+    const currentAccessToken = this.accessTokenSignal();
+    const currentRefreshToken = this.refreshToken;
+    if (currentAccessToken && currentRefreshToken) {
+      localStorage.setItem(PREVIOUS_ACCESS_TOKEN_KEY, currentAccessToken);
+      localStorage.setItem(PREVIOUS_REFRESH_TOKEN_KEY, currentRefreshToken);
+    }
+
     this.storeTokens(tokens);
+    await this.loadCurrentUser();
+  }
+
+  /** Restaura la sesión del Platform Owner guardada antes de impersonar. */
+  async exitImpersonation(): Promise<void> {
+    const previousAccessToken = localStorage.getItem(PREVIOUS_ACCESS_TOKEN_KEY);
+    const previousRefreshToken = localStorage.getItem(PREVIOUS_REFRESH_TOKEN_KEY);
+    localStorage.removeItem(PREVIOUS_ACCESS_TOKEN_KEY);
+    localStorage.removeItem(PREVIOUS_REFRESH_TOKEN_KEY);
+
+    if (!previousAccessToken || !previousRefreshToken) {
+      this.clearSession();
+      return;
+    }
+
+    this.storeTokens({ accessToken: previousAccessToken, refreshToken: previousRefreshToken });
     await this.loadCurrentUser();
   }
 
@@ -76,6 +103,8 @@ export class AuthService {
   clearSession(): void {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(PREVIOUS_ACCESS_TOKEN_KEY);
+    localStorage.removeItem(PREVIOUS_REFRESH_TOKEN_KEY);
     this.accessTokenSignal.set(null);
     this.currentUserSignal.set(null);
   }

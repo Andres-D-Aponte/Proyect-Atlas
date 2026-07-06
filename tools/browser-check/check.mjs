@@ -98,6 +98,12 @@ try {
   await page.waitForSelector('text=09:00 – 18:00');
   await shot('07-branch-schedule');
 
+  step('8) Volver al panel de plataforma sin cerrar sesión');
+  await page.click('button:has-text("Volver al panel de plataforma")');
+  await page.waitForURL('**/platform/companies');
+  await page.waitForSelector(`text=${COMPANY_NAME}`);
+  await shot('08-back-to-platform');
+
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');
   console.log('Errores de página:', pageErrors.length ? pageErrors : 'ninguno');

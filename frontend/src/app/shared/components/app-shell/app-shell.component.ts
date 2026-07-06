@@ -13,5 +13,7 @@ export class AppShellComponent {
   @Input() subtitle?: string;
   @Input() userEmail: string | null = null;
   @Input() showLogout = false;
+  @Input() impersonating = false;
   @Output() logout = new EventEmitter<void>();
+  @Output() exitImpersonation = new EventEmitter<void>();
 }

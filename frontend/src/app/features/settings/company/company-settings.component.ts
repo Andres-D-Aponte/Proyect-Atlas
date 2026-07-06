@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import {
@@ -23,6 +23,7 @@ import { AppShellComponent } from '../../../shared/components/app-shell/app-shel
 export class CompanySettingsComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly settingsService = inject(SettingsService);
+  private readonly router = inject(Router);
   protected readonly authService = inject(AuthService);
 
   protected readonly allPaymentMethods = ALL_PAYMENT_METHODS;
@@ -90,5 +91,10 @@ export class CompanySettingsComponent implements OnInit {
 
     this.saving.set(false);
     this.savedMessage.set('Cambios guardados.');
+  }
+
+  async exitImpersonation(): Promise<void> {
+    await this.authService.exitImpersonation();
+    await this.router.navigateByUrl('/platform/companies');
   }
 }
