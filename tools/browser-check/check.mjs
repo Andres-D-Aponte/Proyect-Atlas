@@ -8,6 +8,9 @@ const OWNER_EMAIL = process.env.ATLAS_OWNER_EMAIL ?? 'owner@atlas.dev';
 const OWNER_PASSWORD = process.env.ATLAS_OWNER_PASSWORD ?? 'ChangeMe123!';
 const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
 const COMPANY_NAME = `Browser Check ${RUN_ID}`;
+const ADMIN_EMAIL = `browser-check-admin-${RUN_ID}@atlas.dev`;
+const ADMIN_PASSWORD = 'ChangeMe123!';
+const STAFF_EMAIL = `browser-check-staff-${RUN_ID}@atlas.dev`;
 
 mkdirSync('screenshots', { recursive: true });
 
@@ -104,10 +107,48 @@ try {
   await page.waitForSelector(`text=${COMPANY_NAME}`);
   await shot('08-back-to-platform');
 
+  step('9) Crear el Business Admin real de la empresa (desde el panel de Empresas)');
+  const adminRow = page.locator('tr', { hasText: COMPANY_NAME });
+  await adminRow.locator('button:has-text("+ Admin")').click();
+  await page.fill('input[placeholder="Correo del Business Admin"]', ADMIN_EMAIL);
+  await page.fill('input[placeholder="Contraseña inicial"]', ADMIN_PASSWORD);
+  await page.locator('tr.admin-form-row').locator('button:has-text("Crear")').click();
+  await page.waitForSelector('input[placeholder="Correo del Business Admin"]', { state: 'detached' });
+  await shot('09-admin-created');
+
+  step('10) Cerrar sesión y entrar con el Business Admin real (no impersonación)');
+  await page.click('button:has-text("Salir")');
+  await page.waitForURL('**/login');
+  await page.fill('input[type=email]', ADMIN_EMAIL);
+  await page.fill('input[type=password]', ADMIN_PASSWORD);
+  await page.click('button:has-text("Ingresar")');
+  await page.waitForURL('**/settings/company');
+  await page.waitForSelector('text=Métodos de pago habilitados');
+  await shot('10-real-admin-login');
+
+  step('11) Crear un usuario Recepcionista/Cajero desde la pestaña Usuarios');
+  await page.click('a:has-text("Usuarios")');
+  await page.waitForURL('**/settings/users');
+  await page.fill('input[placeholder="Correo"]', STAFF_EMAIL);
+  await page.fill('input[placeholder="Contraseña inicial"]', ADMIN_PASSWORD);
+  await page.selectOption('select', 'RECEPTIONIST_CASHIER');
+  await page.click('button:has-text("Crear usuario")');
+  await page.waitForSelector(`text=${STAFF_EMAIL}`);
+  await shot('11-users-created');
+
+  step('12) Desactivar el usuario recién creado');
+  const staffRow = page.locator('tr', { hasText: STAFF_EMAIL });
+  await staffRow.locator('button:has-text("Desactivar")').click();
+  await staffRow.locator('text=Inactivo').waitFor();
+  await shot('12-user-deactivated');
+
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');
   console.log('Errores de página:', pageErrors.length ? pageErrors : 'ninguno');
-  console.log(`\nEmpresa de prueba creada: "${COMPANY_NAME}" — bórrala cuando quieras desde Prisma Studio o psql.`);
+  console.log(
+    `\nEmpresa de prueba creada: "${COMPANY_NAME}" — bórrala cuando quieras desde Prisma Studio o psql ` +
+      `(al borrar la empresa, sus usuarios — el Business Admin y el staff creados en este recorrido — se borran en cascada).`,
+  );
 
   if (consoleErrors.length || pageErrors.length) {
     process.exitCode = 1;

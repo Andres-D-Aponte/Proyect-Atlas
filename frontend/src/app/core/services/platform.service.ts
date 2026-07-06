@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { AuthTokens } from '../models/auth.model';
 import { Company } from '../models/platform.model';
+import { CompanyUser } from '../models/users.model';
 
 @Injectable({ providedIn: 'root' })
 export class PlatformService {
@@ -21,6 +22,15 @@ export class PlatformService {
     return firstValueFrom(
       this.http.post<AuthTokens>(`${API_BASE_URL}/platform/companies/${companyId}/impersonate`, {
         reason,
+      }),
+    );
+  }
+
+  createBusinessAdmin(companyId: number, email: string, password: string): Promise<CompanyUser> {
+    return firstValueFrom(
+      this.http.post<CompanyUser>(`${API_BASE_URL}/platform/companies/${companyId}/admin`, {
+        email,
+        password,
       }),
     );
   }

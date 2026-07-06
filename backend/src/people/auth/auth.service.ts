@@ -35,6 +35,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId ?? undefined,
     });
   }
 
@@ -50,6 +51,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId ?? undefined,
     });
   }
 
@@ -89,6 +91,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId,
     });
   }
 

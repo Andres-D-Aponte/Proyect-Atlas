@@ -17,6 +17,8 @@ import { CurrentUser } from '../../people/auth/decorators/current-user.decorator
 import { Roles } from '../../people/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../people/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../people/auth/guards/roles.guard';
+import { CreateBusinessAdminDto } from '../../people/users/dto/create-business-admin.dto';
+import { SafeUser, UsersService } from '../../people/users/users.service';
 import { ImpersonationService } from '../impersonation/impersonation.service';
 import { AssignLicenseDto } from '../licenses/dto/assign-license.dto';
 import { LicensesService } from '../licenses/licenses.service';
@@ -34,6 +36,7 @@ export class CompaniesController {
     private readonly companiesService: CompaniesService,
     private readonly licensesService: LicensesService,
     private readonly impersonationService: ImpersonationService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Post()
@@ -62,6 +65,14 @@ export class CompaniesController {
   @Get(':id/license')
   getLicense(@Param('id', ParseIntPipe) id: number): Promise<License> {
     return this.licensesService.findByCompanyIdOrThrow(id);
+  }
+
+  @Post(':id/admin')
+  createAdmin(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateBusinessAdminDto,
+  ): Promise<SafeUser> {
+    return this.usersService.createBusinessAdmin(id, dto);
   }
 
   @Post(':id/impersonate')

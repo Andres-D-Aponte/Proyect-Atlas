@@ -400,7 +400,7 @@ npm run test:e2e  # 5 pruebas nuevas (13 en total): 403 por rol, 401 sin token, 
 6. Vas a caer en **Atlas — [nombre de la empresa]**: la pantalla de configuración. Verifica que por defecto la moneda es `COP`, el idioma `es`, y los métodos de pago `CASH` y `TRANSFER` ya están marcados (sin que nadie los haya configurado — es el comportamiento "inteligente por defecto").
 7. Cambia el color principal o cualquier otro campo y presiona "Guardar cambios" — debe aparecer "Cambios guardados."
 8. Ve a la pestaña **Sucursales**, crea una sucursal, y haz clic en "Editar horario" para agregarle un día con hora de apertura/cierre. Guarda y confirma que se ve reflejado en la tarjeta de la sucursal.
-9. Para volver a entrar como Platform Owner, cierra sesión ("Salir") e inicia sesión de nuevo con `owner@atlas.dev`.
+9. Para volver a entrar como Platform Owner, usa la barra amarilla "← Volver al panel de plataforma" que aparece arriba de cualquier pantalla de configuración mientras estás impersonando (ver sección "Volver al panel de plataforma tras impersonar" más arriba) — no hace falta cerrar sesión.
 
 **Qué mirar en la base de datos:**
 
@@ -427,3 +427,44 @@ npm test -- --watch=false
 ```
 
 Para la verificación en navegador, no hace falta Playwright instalado en el proyecto — si quieres repetirla tú mismo, basta con abrir `http://localhost:4200` y seguir los pasos de arriba a mano.
+
+---
+
+### Etapa 5 — Usuarios
+
+**Qué se construyó:** el Platform Owner ahora puede crear el Business Admin real de una empresa (con su propio correo/contraseña, sin depender de impersonar para siempre); y ese Business Admin puede crear y activar/desactivar usuarios Supervisor y Recepcionista/Cajero de su propia empresa. Detalle completo en [`docs/modules/05_usuarios.md`](modules/05_usuarios.md), incluyendo un bug real que encontramos y corregimos (el login normal no llevaba `companyId` en el JWT).
+
+**Paso a paso para probarlo tú mismo, desde cero, usando el navegador:**
+
+1. Levanta el entorno (si ya lo tenías arriba de una etapa anterior, no hace falta repetir esto):
+   ```bash
+   docker compose up -d --build
+   ```
+2. Entra a `http://localhost:4200`, inicia sesión con `owner@atlas.dev` / `ChangeMe123!`.
+3. En el panel de Empresas, en la fila de cualquier empresa, haz clic en **"+ Admin"**. Se despliega un formulario debajo de la fila: pon un correo (ej. `admin@mi-empresa.dev`) y una contraseña (mínimo 8 caracteres), y presiona "Crear".
+4. Cierra sesión ("Salir") e inicia sesión de nuevo, pero ahora con el correo/contraseña del Business Admin que acabas de crear — es un login real, no impersonación. Debes caer directo en la pantalla de Configuración de esa empresa.
+5. Ve a la nueva pestaña **Usuarios** (junto a Empresa y Sucursales). Crea un usuario con rol "Recepcionista / Cajero" usando el formulario de arriba.
+6. En la tabla, haz clic en "Desactivar" sobre ese usuario — su estado debe cambiar a "Inactivo" de inmediato.
+7. (Opcional, para confirmar que de verdad quedó bloqueado) Cierra sesión e intenta iniciar sesión con el correo del usuario desactivado — debe rechazar el login.
+
+**Qué mirar en la base de datos:**
+
+- Tabla `users`: ahora vas a ver más de una fila con `companyId` distinto de nulo — el Business Admin y el staff que le creaste, todos ligados a la misma empresa. La columna `role` distingue quién es quién; `isActive` refleja el estado que cambiaste en el paso 6.
+
+**Qué mirar en el navegador (DevTools):**
+
+- Si decodificas el `atlas.accessToken` (por ejemplo en [jwt.io](https://jwt.io), pegando solo el token, sin enviarlo a ningún sitio con datos reales) vas a ver que el payload del Business Admin real tiene `companyId` — antes de esta etapa, esto solo pasaba con el token de impersonación; ahora también pasa con un login normal.
+
+**Pruebas automatizadas de esta etapa:**
+
+```bash
+cd backend
+npm test          # 7 pruebas nuevas (59 en total): UsersService (crear admin/staff, conflictos, aislamiento)
+docker compose up -d postgres
+npx jest --config ./test/jest-e2e.json --runInBand  # 8 pruebas nuevas (28 en total) — usa --runInBand: correr los 5 archivos e2e en paralelo contra un solo Postgres es intermitente (ver nota en docs/modules/05_usuarios.md), no es un problema de esta etapa
+
+cd ../frontend
+npm run lint
+npm run build
+npm test -- --watch=false
+```

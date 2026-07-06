@@ -46,12 +46,39 @@
                   <span class="badge badge-muted">Sin licencia</span>
                 }
               </td>
-              <td>
+              <td class="actions-cell">
                 <button type="button" class="btn-secondary" (click)="impersonate(company)">
                   Entrar como Business Admin
                 </button>
+                <button type="button" class="btn-secondary" (click)="startCreatingAdmin(company)">
+                  + Admin
+                </button>
               </td>
             </tr>
+            @if (creatingAdminFor() === company.id) {
+              <tr class="admin-form-row">
+                <td colspan="4">
+                  <div class="inline-form">
+                    <input
+                      type="email"
+                      placeholder="Correo del Business Admin"
+                      [(ngModel)]="newAdminEmail"
+                      name="newAdminEmail"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Contraseña inicial"
+                      [(ngModel)]="newAdminPassword"
+                      name="newAdminPassword"
+                    />
+                    <button type="button" (click)="createAdmin(company)">Crear</button>
+                    <button type="button" class="btn-ghost" (click)="cancelCreatingAdmin()">
+                      Cancelar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>

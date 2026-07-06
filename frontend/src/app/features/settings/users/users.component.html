@@ -1,0 +1,78 @@
+<app-shell
+  title="Usuarios"
+  subtitle="Supervisor y Recepcionista/Cajero de tu empresa"
+  [userEmail]="authService.currentUser()?.email ?? null"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
+>
+  <nav class="tabs" shell-tabs>
+    <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
+    <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
+    <a routerLink="/settings/users" routerLinkActive="active">Usuarios</a>
+  </nav>
+
+  <section class="create-form">
+    <input type="email" placeholder="Correo" [(ngModel)]="newEmail" name="newEmail" />
+    <input
+      type="password"
+      placeholder="Contraseña inicial"
+      [(ngModel)]="newPassword"
+      name="newPassword"
+    />
+    <select [(ngModel)]="newRole" name="newRole">
+      @for (option of assignableRoles; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+    <button type="button" [disabled]="creating()" (click)="createUser()">
+      @if (creating()) {
+        <span class="spinner"></span> Creando…
+      } @else {
+        + Crear usuario
+      }
+    </button>
+  </section>
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+
+  @if (loading()) {
+    <p><span class="spinner"></span> Cargando…</p>
+  } @else if (users().length === 0) {
+    <div class="empty-state">Todavía no hay usuarios de staff creados.</div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Correo</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+            <tr>
+              <td>{{ user.email }}</td>
+              <td><span class="badge">{{ roleLabels[user.role] }}</span></td>
+              <td>
+                @if (user.isActive) {
+                  <span class="badge">Activo</span>
+                } @else {
+                  <span class="badge badge-muted">Inactivo</span>
+                }
+              </td>
+              <td>
+                <button type="button" class="btn-secondary" (click)="toggleActive(user)">
+                  {{ user.isActive ? 'Desactivar' : 'Reactivar' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</app-shell>

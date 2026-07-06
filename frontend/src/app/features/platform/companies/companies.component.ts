@@ -23,6 +23,10 @@ export class CompaniesComponent implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected newCompanyName = '';
 
+  protected readonly creatingAdminFor = signal<number | null>(null);
+  protected newAdminEmail = '';
+  protected newAdminPassword = '';
+
   async ngOnInit(): Promise<void> {
     await this.reload();
   }
@@ -63,6 +67,37 @@ export class CompaniesComponent implements OnInit {
       await this.router.navigateByUrl('/settings/company');
     } catch {
       this.errorMessage.set('No se pudo impersonar la empresa.');
+    }
+  }
+
+  startCreatingAdmin(company: Company): void {
+    this.errorMessage.set(null);
+    this.newAdminEmail = '';
+    this.newAdminPassword = '';
+    this.creatingAdminFor.set(company.id);
+  }
+
+  cancelCreatingAdmin(): void {
+    this.creatingAdminFor.set(null);
+  }
+
+  async createAdmin(company: Company): Promise<void> {
+    if (!this.newAdminEmail.trim() || !this.newAdminPassword.trim()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    try {
+      await this.platformService.createBusinessAdmin(
+        company.id,
+        this.newAdminEmail.trim(),
+        this.newAdminPassword,
+      );
+      this.cancelCreatingAdmin();
+    } catch {
+      this.errorMessage.set(
+        'No se pudo crear el Business Admin. Verifica que el correo no esté en uso.',
+      );
     }
   }
 
