@@ -1,13 +1,5 @@
-<div class="page">
-  <header>
-    <h1>Atlas — Sucursales</h1>
-    <div class="user-info">
-      <span>{{ authService.currentUser()?.email }}</span>
-      <app-theme-toggle />
-    </div>
-  </header>
-
-  <nav class="tabs">
+<app-shell title="Sucursales" [userEmail]="authService.currentUser()?.email ?? null">
+  <nav class="tabs" shell-tabs>
     <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
     <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
   </nav>
@@ -15,28 +7,38 @@
   <section class="create-form">
     <input type="text" placeholder="Nombre de la sucursal" [(ngModel)]="newBranchName" name="newBranchName" />
     <input type="text" placeholder="Dirección (opcional)" [(ngModel)]="newBranchAddress" name="newBranchAddress" />
-    <button type="button" (click)="createBranch()">Crear sucursal</button>
+    <button type="button" (click)="createBranch()">+ Crear sucursal</button>
   </section>
 
   @if (loading()) {
-    <p>Cargando…</p>
+    <p><span class="spinner"></span> Cargando…</p>
   } @else if (branches().length === 0) {
-    <p>Todavía no hay sucursales creadas.</p>
+    <div class="empty-state">Todavía no hay sucursales creadas.</div>
   } @else {
     @for (branch of branches(); track branch.id) {
-      <div class="branch-card">
+      <div class="card branch-card">
         <div class="branch-header">
-          <strong>{{ branch.name }}</strong>
-          <span>{{ branch.address }}</span>
-          <button type="button" (click)="editSchedule(branch)">Editar horario</button>
+          <div>
+            <strong>{{ branch.name }}</strong>
+            @if (branch.address) {
+              <span class="branch-address">{{ branch.address }}</span>
+            }
+          </div>
+          <button type="button" class="btn-secondary" (click)="editSchedule(branch)">
+            Editar horario
+          </button>
         </div>
 
-        @if (!editingScheduleFor() && branch.openingHours?.length) {
-          <ul class="schedule-summary">
-            @for (hour of branch.openingHours; track hour.dayOfWeek) {
-              <li>{{ dayNames[hour.dayOfWeek] }}: {{ hour.opensAt }} – {{ hour.closesAt }}</li>
-            }
-          </ul>
+        @if (editingScheduleFor() !== branch.id) {
+          @if (branch.openingHours?.length) {
+            <ul class="schedule-summary">
+              @for (hour of branch.openingHours; track hour.dayOfWeek) {
+                <li><span class="badge badge-muted">{{ dayNames[hour.dayOfWeek] }}</span> {{ hour.opensAt }} – {{ hour.closesAt }}</li>
+              }
+            </ul>
+          } @else {
+            <p class="no-schedule">Sin horario definido todavía.</p>
+          }
         }
 
         @if (editingScheduleFor() === branch.id) {
@@ -59,6 +61,7 @@
                   name="opensAt-{{ $index }}"
                   placeholder="09:00"
                 />
+                <span class="schedule-sep">–</span>
                 <input
                   type="text"
                   [ngModel]="row.closesAt"
@@ -66,17 +69,17 @@
                   name="closesAt-{{ $index }}"
                   placeholder="18:00"
                 />
-                <button type="button" (click)="removeScheduleRow($index)">Quitar</button>
+                <button type="button" class="btn-ghost" (click)="removeScheduleRow($index)">✕</button>
               </div>
             }
             <div class="schedule-actions">
-              <button type="button" (click)="addScheduleRow()">Añadir día</button>
+              <button type="button" class="btn-secondary" (click)="addScheduleRow()">+ Añadir día</button>
               <button type="button" (click)="saveSchedule()">Guardar horario</button>
-              <button type="button" (click)="cancelSchedule()">Cancelar</button>
+              <button type="button" class="btn-ghost" (click)="cancelSchedule()">Cancelar</button>
             </div>
           </div>
         }
       </div>
     }
   }
-</div>
+</app-shell>

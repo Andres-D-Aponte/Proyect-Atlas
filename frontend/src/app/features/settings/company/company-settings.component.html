@@ -1,21 +1,17 @@
-<div class="page">
-  <header>
-    <h1>Atlas — {{ companyName || 'Configuración' }}</h1>
-    <div class="user-info">
-      <span>{{ authService.currentUser()?.email }}</span>
-      <app-theme-toggle />
-    </div>
-  </header>
-
-  <nav class="tabs">
+<app-shell
+  title="Configuración"
+  [subtitle]="companyName"
+  [userEmail]="authService.currentUser()?.email ?? null"
+>
+  <nav class="tabs" shell-tabs>
     <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
     <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
   </nav>
 
   @if (loading()) {
-    <p>Cargando…</p>
+    <p><span class="spinner"></span> Cargando…</p>
   } @else {
-    <form class="settings-form" [formGroup]="form" (ngSubmit)="save()">
+    <form class="settings-form card" [formGroup]="form" (ngSubmit)="save()">
       <label>
         Logo (URL)
         <input type="text" formControlName="logoUrl" placeholder="https://…" />
@@ -23,45 +19,66 @@
 
       <label>
         Color principal
-        <input type="text" formControlName="primaryColor" placeholder="#1A2B3C" />
+        <div class="color-field">
+          <input type="color" formControlName="primaryColor" />
+          <span class="color-hex">{{ form.controls.primaryColor.value }}</span>
+        </div>
       </label>
 
       <label>
         Zona horaria
-        <input type="text" formControlName="timezone" />
+        <select formControlName="timezone">
+          @for (option of timezoneOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
       </label>
 
       <label>
-        Moneda (ISO 4217)
-        <input type="text" formControlName="currency" maxlength="3" />
+        Moneda
+        <select formControlName="currency">
+          @for (option of currencyOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
       </label>
 
       <label>
         Idioma
-        <input type="text" formControlName="language" />
+        <select formControlName="language">
+          @for (option of languageOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
       </label>
 
       <fieldset>
         <legend>Métodos de pago habilitados</legend>
-        @for (method of allPaymentMethods; track method) {
-          <label class="checkbox">
-            <input
-              type="checkbox"
-              [checked]="isPaymentMethodEnabled(method)"
-              (change)="togglePaymentMethod(method, $any($event.target).checked)"
-            />
-            {{ method }}
-          </label>
-        }
+        <div class="checkbox-grid">
+          @for (method of allPaymentMethods; track method) {
+            <label class="checkbox">
+              <input
+                type="checkbox"
+                [checked]="isPaymentMethodEnabled(method)"
+                (change)="togglePaymentMethod(method, $any($event.target).checked)"
+              />
+              {{ paymentMethodLabels[method] }}
+            </label>
+          }
+        </div>
       </fieldset>
 
       @if (savedMessage()) {
-        <p class="success">{{ savedMessage() }}</p>
+        <p class="success">✓ {{ savedMessage() }}</p>
       }
 
       <button type="submit" [disabled]="saving()">
-        {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        @if (saving()) {
+          <span class="spinner"></span> Guardando…
+        } @else {
+          Guardar cambios
+        }
       </button>
     </form>
   }
-</div>
+</app-shell>

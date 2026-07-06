@@ -112,6 +112,17 @@ En `http://localhost:3000/api/docs` tienes **Swagger**: una página interactiva 
 
 Desde la Etapa 4, cada pantalla tiene un botón 🌙/☀️ (junto a tu correo, en la esquina de la pantalla de login) que alterna entre modo claro y oscuro. La elección se recuerda en tu navegador (`localStorage`, clave `atlas.theme`) — si nunca lo tocas, la app sigue automáticamente la preferencia de tu sistema operativo. Es puramente visual (CSS, variables de color); no afecta ningún dato ni comportamiento.
 
+### Diseño visual y configuración simplificada
+
+Todas las pantallas comparten un mismo encabezado con la marca "Atlas" (`AppShellComponent`, en `frontend/src/app/shared/components/app-shell/`) y un sistema de diseño único (`frontend/src/styles.scss`): paleta de colores, tarjetas, botones, tablas y formularios consistentes en toda la app, en vez de que cada pantalla invente su propio estilo.
+
+En la configuración de empresa, específicamente:
+
+- **Moneda**: un selector con solo COP y USD por ahora (no hay que escribir un código a mano). El backend ya acepta cualquier código de 3 letras, así que agregar más monedas en el futuro es solo cuestión de sumar una opción en el frontend, sin tocar el backend.
+- **Zona horaria** e **Idioma**: también selectores, con una lista corta de zonas horarias comunes y, por ahora, un único idioma disponible (Español).
+- **Color principal**: un selector de color nativo del navegador (la típica rueda/paleta del sistema operativo) en vez de escribir un código hexadecimal a mano — al lado se muestra el código capturado, por si lo necesitas para otra cosa.
+- **Métodos de pago**: casillas con nombres en español (Efectivo, Transferencia, Nequi...) en vez de los nombres técnicos en inglés que usa la base de datos.
+
 ---
 
 ## Cómo ver las tablas y los datos de la base de datos

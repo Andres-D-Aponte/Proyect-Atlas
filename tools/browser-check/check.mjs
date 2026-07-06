@@ -27,6 +27,13 @@ page.on('dialog', async (dialog) => {
 });
 
 async function shot(name) {
+  // Vuelve al top antes de capturar: si la página quedó desplazada (por ejemplo
+  // tras interactuar con un <input type="color">), un screenshot fullPage con
+  // un header "position: sticky" a mitad de scroll produce un stitching
+  // incorrecto en Chromium (el header aparece pegado en una posición rara).
+  // No es un bug de la app — es una limitación conocida de las capturas
+  // fullPage con elementos sticky/fixed.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: `screenshots/${name}.png`, fullPage: true });
   console.log('  screenshot:', name);
 }
@@ -69,8 +76,9 @@ try {
   await page.waitForSelector('text=Métodos de pago habilitados');
   await shot('05-settings-company');
 
-  step('6) Actualizar configuración de la empresa');
-  await page.fill('input[formcontrolname=primaryColor]', '#334455');
+  step('6) Actualizar configuración de la empresa (color con selector nativo)');
+  await page.locator('input[formcontrolname=primaryColor]').fill('#334455');
+  await page.waitForSelector('text=#334455');
   await page.click('button:has-text("Guardar cambios")');
   await page.waitForSelector('text=Cambios guardados.');
   await shot('06-settings-saved');
@@ -87,7 +95,7 @@ try {
   await page.fill('input[placeholder="09:00"]', '09:00');
   await page.fill('input[placeholder="18:00"]', '18:00');
   await page.click('button:has-text("Guardar horario")');
-  await page.waitForSelector('text=Lunes: 09:00 – 18:00');
+  await page.waitForSelector('text=09:00 – 18:00');
   await shot('07-branch-schedule');
 
   console.log('\n=== RESULTADO: OK ===');

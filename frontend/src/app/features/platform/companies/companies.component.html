@@ -1,13 +1,10 @@
-<div class="page">
-  <header>
-    <h1>Atlas — Empresas</h1>
-    <div class="user-info">
-      <span>{{ currentUserEmail }}</span>
-      <app-theme-toggle />
-      <button type="button" (click)="logout()">Salir</button>
-    </div>
-  </header>
-
+<app-shell
+  title="Empresas"
+  subtitle="Empresas registradas en la plataforma"
+  [userEmail]="currentUserEmail ?? null"
+  [showLogout]="true"
+  (logout)="logout()"
+>
   <section class="create-form">
     <input
       type="text"
@@ -15,7 +12,7 @@
       [(ngModel)]="newCompanyName"
       name="newCompanyName"
     />
-    <button type="button" (click)="createCompany()">Crear empresa</button>
+    <button type="button" (click)="createCompany()">+ Crear empresa</button>
   </section>
 
   @if (errorMessage()) {
@@ -23,33 +20,41 @@
   }
 
   @if (loading()) {
-    <p>Cargando…</p>
+    <p><span class="spinner"></span> Cargando…</p>
   } @else if (companies().length === 0) {
-    <p>Todavía no hay empresas creadas.</p>
+    <div class="empty-state">Todavía no hay empresas creadas.</div>
   } @else {
-    <table>
-      <thead>
-        <tr>
-          <th>Id</th>
-          <th>Nombre</th>
-          <th>Licencia</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (company of companies(); track company.id) {
+    <div class="table-card">
+      <table>
+        <thead>
           <tr>
-            <td>{{ company.id }}</td>
-            <td>{{ company.name }}</td>
-            <td>{{ company.license ? company.license.billingCycle : 'Sin licencia' }}</td>
-            <td>
-              <button type="button" (click)="impersonate(company)">
-                Entrar como Business Admin
-              </button>
-            </td>
+            <th>Id</th>
+            <th>Nombre</th>
+            <th>Licencia</th>
+            <th></th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (company of companies(); track company.id) {
+            <tr>
+              <td>{{ company.id }}</td>
+              <td>{{ company.name }}</td>
+              <td>
+                @if (company.license) {
+                  <span class="badge">{{ company.license.billingCycle }}</span>
+                } @else {
+                  <span class="badge badge-muted">Sin licencia</span>
+                }
+              </td>
+              <td>
+                <button type="button" class="btn-secondary" (click)="impersonate(company)">
+                  Entrar como Business Admin
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
-</div>
+</app-shell>

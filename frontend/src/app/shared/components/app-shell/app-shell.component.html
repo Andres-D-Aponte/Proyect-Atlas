@@ -1,0 +1,32 @@
+<header class="app-shell-header">
+  <div class="brand">
+    <span class="brand-mark">A</span>
+    Atlas
+  </div>
+
+  <div class="app-shell-actions">
+    @if (userEmail) {
+      <span>{{ userEmail }}</span>
+    }
+    <app-theme-toggle />
+    @if (showLogout) {
+      <button type="button" class="btn-ghost" (click)="logout.emit()">Salir</button>
+    }
+  </div>
+</header>
+
+<main class="app-shell-main">
+  <div class="page-header">
+    <div>
+      <h1>{{ title }}</h1>
+      @if (subtitle) {
+        <p>{{ subtitle }}</p>
+      }
+    </div>
+    <ng-content select="[shell-actions]" />
+  </div>
+
+  <ng-content select="[shell-tabs]" />
+
+  <ng-content />
+</main>

@@ -1,18 +1,2 @@
-fieldset {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.75rem;
-
-  legend {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  .checkbox {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.9rem;
-  }
-}
+/* Estilos específicos de esta página; el sistema de diseño compartido
+   (fieldset, checkbox-grid, tarjetas, etc.) vive en styles.scss global. */
