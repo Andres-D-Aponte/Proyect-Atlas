@@ -2,6 +2,8 @@
   title="Configuración"
   [subtitle]="companyName"
   [userEmail]="authService.currentUser()?.email ?? null"
+  [showLogout]="true"
+  (logout)="logout()"
   [impersonating]="authService.isImpersonating()"
   (exitImpersonation)="exitImpersonation()"
 >

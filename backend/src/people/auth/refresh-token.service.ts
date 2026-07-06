@@ -35,6 +35,14 @@ export class RefreshTokenService {
    * Valida el refresh token presentado, lo revoca (rotación) y devuelve el
    * registro junto con el usuario dueño. Lanza si no existe, expiró o ya fue
    * usado/revocado antes (evita reutilizar un token robado).
+   *
+   * La revocación usa `updateMany` con `revokedAt: null` en el `where` (no un
+   * `update` simple por `id`) para que sea atómica: si dos peticiones
+   * concurrentes intentan consumir el mismo token casi al mismo tiempo (ej.
+   * dos pestañas, o dos llamadas HTTP en paralelo justo cuando el access
+   * token expiró), solo una gana la carrera y la otra recibe un 401 limpio en
+   * vez de que ambas lo den por válido y generen dos tokens nuevos a partir
+   * del mismo original.
    */
   async consume(rawToken: string): Promise<RefreshToken> {
     const tokenHash = this.hash(rawToken);
@@ -46,10 +54,14 @@ export class RefreshTokenService {
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+
+    if (count === 0) {
+      throw new UnauthorizedException('Refresh token inválido o expirado');
+    }
 
     return stored;
   }

@@ -18,6 +18,17 @@ export class AuthService {
   );
   private readonly currentUserSignal = signal<CurrentUser | null>(null);
 
+  /**
+   * Cuando el access token expira, varias peticiones en curso pueden recibir
+   * un 401 casi al mismo tiempo (ej. una pantalla que carga dos recursos en
+   * paralelo). Sin esto, cada una dispararía su propio `POST /auth/refresh`
+   * con el mismo refresh token — y como el backend lo revoca de un solo uso
+   * (rotación), la segunda petición fallaría y cerraría la sesión aunque el
+   * usuario no haya hecho nada malo. Todas comparten esta única promesa en
+   * vuelo en vez de refrescar cada una por su cuenta.
+   */
+  private refreshInFlight: Promise<AuthTokens> | null = null;
+
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.accessTokenSignal() !== null);
   readonly isImpersonating = computed(() => this.currentUserSignal()?.impersonatedBy != null);
@@ -75,6 +86,19 @@ export class AuthService {
   }
 
   async refresh(): Promise<AuthTokens> {
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
+    }
+
+    this.refreshInFlight = this.performRefresh();
+    try {
+      return await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
+  }
+
+  private async performRefresh(): Promise<AuthTokens> {
     const refreshToken = this.refreshToken;
     if (!refreshToken) {
       throw new Error('No hay refresh token disponible');

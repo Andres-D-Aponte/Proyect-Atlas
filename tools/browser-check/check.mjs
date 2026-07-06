@@ -205,6 +205,11 @@ try {
     if (index !== -1) consoleErrors.splice(index, 1);
   }
 
+  step('20) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
+  await page.click('button:has-text("Salir")');
+  await page.waitForURL('**/login');
+  await shot('20-logout-from-business-admin-screen');
+
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');
   console.log('Errores de página:', pageErrors.length ? pageErrors : 'ninguno');

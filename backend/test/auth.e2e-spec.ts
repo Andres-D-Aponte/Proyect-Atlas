@@ -133,6 +133,24 @@ describe('Auth (e2e)', () => {
       .expect(401);
   });
 
+  it('dos refresh concurrentes con el mismo token: exactamente uno gana la carrera', async () => {
+    const tokens = await login(app, businessAdminEmail, password);
+
+    const [first, second] = await Promise.all([
+      request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: tokens.refreshToken }),
+      request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: tokens.refreshToken }),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    // Nunca deben ganar los dos a la vez (eso generaría dos pares de tokens
+    // válidos a partir del mismo refresh token original).
+    expect(statuses).toEqual([200, 401]);
+  });
+
   it('permite a un Business Admin acceder a un endpoint restringido a su rol', async () => {
     const tokens = await login(app, businessAdminEmail, password);
 

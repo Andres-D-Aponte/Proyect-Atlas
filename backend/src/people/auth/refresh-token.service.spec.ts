@@ -11,7 +11,7 @@ describe('RefreshTokenService', () => {
     refreshToken: {
       create: jest.Mock;
       findUnique: jest.Mock;
-      update: jest.Mock;
+      updateMany: jest.Mock;
     };
   };
 
@@ -20,7 +20,7 @@ describe('RefreshTokenService', () => {
       refreshToken: {
         create: jest.fn().mockResolvedValue({}),
         findUnique: jest.fn(),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -58,10 +58,27 @@ describe('RefreshTokenService', () => {
     const result = await service.consume('raw-token');
 
     expect(result.userId).toBe(1);
-    expect(prisma.refreshToken.update).toHaveBeenCalledWith({
-      where: { id: 'rt-1' },
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { id: 'rt-1', revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
+  });
+
+  it('consume rechaza si otra petición concurrente ya lo revocó justo antes (carrera)', async () => {
+    // findUnique todavía lo ve como válido (llegó justo antes de que la otra
+    // petición terminara su updateMany), pero el updateMany condicionado a
+    // revokedAt: null no afecta ninguna fila porque la otra ya ganó la carrera.
+    prisma.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt-1',
+      userId: 1,
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    prisma.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.consume('raw-token')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('consume rechaza un token inexistente', async () => {

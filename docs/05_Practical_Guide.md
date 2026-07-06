@@ -143,6 +143,18 @@ Por dentro:
 
 Para verlo tú mismo: intenta crear dos categorías de servicio con el mismo nombre, o un servicio con una comisión porcentual de más de 100 — en ambos casos debe aparecer el toast rojo con el motivo exacto.
 
+### Botón de logout en todas las pantallas + sesión estable ante la inactividad
+
+Antes, el botón "Salir" solo existía en el panel de Empresas (Platform Owner) — ninguna de las 4 pantallas de Configuración (Empresa, Sucursales, Usuarios, Servicios), que es donde vive el día a día de un Business Admin/Supervisor/Recepcionista, tenía forma de cerrar sesión sin borrar manualmente el `localStorage`. Ahora las 5 pantallas pasan `[showLogout]="true"` y `(logout)="logout()"` al `AppShellComponent`, así que "Salir" siempre está visible arriba a la derecha, sin importar en qué pantalla estés.
+
+Aparte, se corrigió una condición de carrera real que podía cerrar la sesión de golpe aunque el usuario no llevara horas inactivo, sino apenas al retomar actividad justo cuando el access token (dura 15 minutos) ya había expirado:
+
+- El refresh token es de un solo uso (rotación): cada vez que se usa, el backend lo revoca y entrega uno nuevo.
+- Si una pantalla dispara **dos o más peticiones al backend en paralelo** justo cuando el access token expiró (ej. la pestaña Servicios carga categorías y servicios a la vez con `Promise.all`), las dos reciben 401 casi al mismo tiempo, y **cada una intentaba renovar la sesión por su cuenta** con el mismo refresh token — la segunda en llegar se encontraba el token ya usado por la primera y fallaba, cerrando la sesión sin motivo real.
+- **Arreglado en el frontend** (`core/services/auth.service.ts`): ahora todas las peticiones que necesitan renovar la sesión al mismo tiempo comparten una única llamada de refresh en vuelo (`refreshInFlight`), en vez de disparar una cada una.
+- **Arreglado también en el backend** (`people/auth/refresh-token.service.ts`): la revocación del refresh token ahora es atómica (`updateMany` condicionado a que siga sin revocar, no un `update` simple), para que dos peticiones concurrentes con el mismo token nunca puedan "ganar" las dos a la vez — cierra el mismo hueco incluso si el usuario tiene dos pestañas abiertas con la misma sesión.
+- El refresh token dura 30 días (`REFRESH_TOKEN_TTL_DAYS`) — de sobra para "horas sin tocar la pantalla"; el problema nunca fue la duración, sino esta carrera al retomar actividad.
+
 ---
 
 ## Cómo ver las tablas y los datos de la base de datos

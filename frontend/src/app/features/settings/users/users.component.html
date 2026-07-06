@@ -2,6 +2,8 @@
   title="Usuarios"
   subtitle="Supervisor y Recepcionista/Cajero de tu empresa"
   [userEmail]="authService.currentUser()?.email ?? null"
+  [showLogout]="true"
+  (logout)="logout()"
   [impersonating]="authService.isImpersonating()"
   (exitImpersonation)="exitImpersonation()"
 >

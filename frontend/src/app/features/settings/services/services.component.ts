@@ -167,4 +167,9 @@ export class ServicesComponent implements OnInit {
     await this.authService.exitImpersonation();
     await this.router.navigateByUrl('/platform/companies');
   }
+
+  async logout(): Promise<void> {
+    await this.authService.logout();
+    await this.router.navigateByUrl('/login');
+  }
 }
