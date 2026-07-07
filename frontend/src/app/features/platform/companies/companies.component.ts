@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PlatformService } from '../../../core/services/platform.service';
 import { Company } from '../../../core/models/platform.model';
+import { scrollToId } from '../../../core/utils/scroll';
 import { AppShellComponent } from '../../../shared/components/app-shell/app-shell.component';
 
 @Component({
@@ -48,13 +49,15 @@ export class CompaniesComponent implements OnInit {
   async createCompany(): Promise<void> {
     if (!this.newCompanyName.trim()) {
       this.companyFormError.set('Escribe un nombre para la empresa.');
+      scrollToId('company-form-error');
       return;
     }
 
     this.companyFormError.set(null);
-    await this.platformService.createCompany(this.newCompanyName.trim());
+    const created = await this.platformService.createCompany(this.newCompanyName.trim());
     this.newCompanyName = '';
     await this.reload();
+    scrollToId(`company-row-${created.id}`);
   }
 
   async impersonate(company: Company): Promise<void> {
@@ -77,6 +80,7 @@ export class CompaniesComponent implements OnInit {
     this.newAdminPassword = '';
     this.adminFormError.set(null);
     this.creatingAdminFor.set(company.id);
+    scrollToId(`admin-form-row-${company.id}`);
   }
 
   cancelCreatingAdmin(): void {
@@ -96,6 +100,7 @@ export class CompaniesComponent implements OnInit {
 
     if (missing.length > 0) {
       this.adminFormError.set(`Falta completar ${missing.join(' y ')} para crear el Business Admin.`);
+      scrollToId(`admin-form-error-${company.id}`);
       return;
     }
 

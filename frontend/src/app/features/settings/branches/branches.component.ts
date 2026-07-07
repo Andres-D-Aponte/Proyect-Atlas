@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { Branch, OpeningHour } from '../../../core/models/settings.model';
+import { scrollToId } from '../../../core/utils/scroll';
 import { AppShellComponent } from '../../../shared/components/app-shell/app-shell.component';
 
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -43,22 +44,25 @@ export class BranchesComponent implements OnInit {
   async createBranch(): Promise<void> {
     if (!this.newBranchName.trim()) {
       this.formError.set('Escribe un nombre para la sucursal.');
+      scrollToId('branch-form-error');
       return;
     }
 
     this.formError.set(null);
-    await this.settingsService.createBranch(
+    const created = await this.settingsService.createBranch(
       this.newBranchName.trim(),
       this.newBranchAddress.trim() || undefined,
     );
     this.newBranchName = '';
     this.newBranchAddress = '';
     await this.reload();
+    scrollToId(`branch-card-${created.id}`);
   }
 
   editSchedule(branch: Branch): void {
     this.editingScheduleFor.set(branch.id);
     this.draftSchedule.set(branch.openingHours ? [...branch.openingHours] : []);
+    scrollToId(`branch-schedule-editor-${branch.id}`);
   }
 
   cancelSchedule(): void {

@@ -12,6 +12,7 @@ import {
 } from '../../../core/models/catalog.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
+import { scrollToId } from '../../../core/utils/scroll';
 import { AppShellComponent } from '../../../shared/components/app-shell/app-shell.component';
 
 @Component({
@@ -83,14 +84,16 @@ export class ServicesComponent implements OnInit {
   async createCategory(): Promise<void> {
     if (!this.newCategoryName.trim()) {
       this.categoryFormError.set('Escribe un nombre para la categoría.');
+      scrollToId('category-form-error');
       return;
     }
 
     this.categoryFormError.set(null);
     try {
-      await this.catalogService.createCategory(this.newCategoryName.trim());
+      const created = await this.catalogService.createCategory(this.newCategoryName.trim());
       this.newCategoryName = '';
       await this.reload();
+      scrollToId(`category-badge-${created.id}`);
     } catch {
       // El interceptor global ya mostró el toast con el motivo del error.
     }
@@ -137,15 +140,17 @@ export class ServicesComponent implements OnInit {
 
     if (missing.length > 0) {
       this.serviceFormError.set(`Falta completar ${missing.join(' y ')} para crear el servicio.`);
+      scrollToId('service-form-error');
       return;
     }
 
     this.serviceFormError.set(null);
     this.creatingService.set(true);
     try {
-      await this.catalogService.createService(this.newService);
+      const created = await this.catalogService.createService(this.newService);
       this.newService = emptyServiceDraft();
       await this.reload();
+      scrollToId(`service-row-${created.id}`);
     } catch {
       // El interceptor global ya mostró el toast con el motivo del error.
     } finally {
@@ -156,6 +161,7 @@ export class ServicesComponent implements OnInit {
   startEditingService(service: Service): void {
     this.editingServiceId.set(service.id);
     this.editingServiceDraft = draftFromService(service);
+    scrollToId(`service-edit-row-${service.id}`);
   }
 
   cancelEditingService(): void {

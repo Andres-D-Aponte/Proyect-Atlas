@@ -20,7 +20,7 @@
     <button type="button" (click)="createBranch()">+ Crear sucursal</button>
   </section>
   @if (formError()) {
-    <p class="error">{{ formError() }}</p>
+    <p class="error" id="branch-form-error">{{ formError() }}</p>
   }
 
   @if (loading()) {
@@ -29,7 +29,7 @@
     <div class="empty-state">Todavía no hay sucursales creadas.</div>
   } @else {
     @for (branch of branches(); track branch.id) {
-      <div class="card branch-card">
+      <div class="card branch-card" [id]="'branch-card-' + branch.id">
         <div class="branch-header">
           <div>
             <strong>{{ branch.name }}</strong>
@@ -55,7 +55,7 @@
         }
 
         @if (editingScheduleFor() === branch.id) {
-          <div class="schedule-editor">
+          <div class="schedule-editor" [id]="'branch-schedule-editor-' + branch.id">
             @for (row of draftSchedule(); track $index) {
               <div class="schedule-row">
                 <select

@@ -10,6 +10,7 @@ import {
 } from '../../core/models/clients.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ClientsService } from '../../core/services/clients.service';
+import { scrollToId } from '../../core/utils/scroll';
 import { AppShellComponent } from '../../shared/components/app-shell/app-shell.component';
 
 @Component({
@@ -64,15 +65,17 @@ export class ClientsComponent implements OnInit {
 
     if (missing.length > 0) {
       this.formError.set(`Falta completar ${missing.join(' y ')} para crear el cliente.`);
+      scrollToId('client-form-error');
       return;
     }
 
     this.formError.set(null);
     this.creating.set(true);
     try {
-      await this.clientsService.create(this.newClient);
+      const created = await this.clientsService.create(this.newClient);
       this.newClient = emptyClientDraft();
       await this.reload();
+      scrollToId(`client-row-${created.id}`);
     } catch {
       // El interceptor global ya mostró el toast con el motivo del error.
     } finally {
@@ -84,6 +87,7 @@ export class ClientsComponent implements OnInit {
     this.viewingTimelineForId.set(null);
     this.editingClientId.set(client.id);
     this.editingDraft = draftFromClient(client);
+    scrollToId(`client-edit-row-${client.id}`);
   }
 
   cancelEditing(): void {
@@ -111,6 +115,7 @@ export class ClientsComponent implements OnInit {
     this.loadingTimeline.set(true);
     this.timelineEvents.set(await this.clientsService.getTimeline(client.id));
     this.loadingTimeline.set(false);
+    scrollToId(`client-timeline-row-${client.id}`);
   }
 
   async exitImpersonation(): Promise<void> {

@@ -40,7 +40,7 @@
       obligatorios si tu empresa lo exige en Configuración → Empresa.
     </p>
     @if (formError()) {
-      <p class="error">{{ formError() }}</p>
+      <p class="error" id="client-form-error">{{ formError() }}</p>
     }
     <button type="button" [disabled]="creating()" (click)="createClient()">
       @if (creating()) {
@@ -80,7 +80,7 @@
         </thead>
         <tbody>
           @for (client of clients(); track client.id) {
-            <tr>
+            <tr [id]="'client-row-' + client.id">
               <td>{{ client.name }}</td>
               <td>{{ client.phone }}</td>
               <td>{{ client.email || '—' }}</td>
@@ -96,7 +96,7 @@
             </tr>
 
             @if (editingClientId() === client.id) {
-              <tr class="client-edit-row">
+              <tr class="client-edit-row" [id]="'client-edit-row-' + client.id">
                 <td colspan="5">
                   <div class="client-grid">
                     <label>
@@ -143,7 +143,7 @@
             }
 
             @if (viewingTimelineForId() === client.id) {
-              <tr class="client-timeline-row">
+              <tr class="client-timeline-row" [id]="'client-timeline-row-' + client.id">
                 <td colspan="5">
                   @if (loadingTimeline()) {
                     <p><span class="spinner"></span> Cargando historial…</p>

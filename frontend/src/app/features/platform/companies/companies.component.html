@@ -15,7 +15,7 @@
     <button type="button" (click)="createCompany()">+ Crear empresa</button>
   </section>
   @if (companyFormError()) {
-    <p class="error">{{ companyFormError() }}</p>
+    <p class="error" id="company-form-error">{{ companyFormError() }}</p>
   }
 
   @if (loading()) {
@@ -35,7 +35,7 @@
         </thead>
         <tbody>
           @for (company of companies(); track company.id) {
-            <tr>
+            <tr [id]="'company-row-' + company.id">
               <td>{{ company.id }}</td>
               <td>{{ company.name }}</td>
               <td>
@@ -55,7 +55,7 @@
               </td>
             </tr>
             @if (creatingAdminFor() === company.id) {
-              <tr class="admin-form-row">
+              <tr class="admin-form-row" [id]="'admin-form-row-' + company.id">
                 <td colspan="4">
                   <div class="inline-form">
                     <input
@@ -76,7 +76,9 @@
                     </button>
                   </div>
                   @if (adminFormError()) {
-                    <p class="error">{{ adminFormError() }}</p>
+                    <p class="error" [id]="'admin-form-error-' + company.id">
+                      {{ adminFormError() }}
+                    </p>
                   }
                 </td>
               </tr>

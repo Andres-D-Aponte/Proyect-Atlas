@@ -37,7 +37,7 @@
     </button>
   </section>
   @if (formError()) {
-    <p class="error">{{ formError() }}</p>
+    <p class="error" id="user-form-error">{{ formError() }}</p>
   }
 
   @if (loading()) {
@@ -57,7 +57,7 @@
         </thead>
         <tbody>
           @for (user of users(); track user.id) {
-            <tr>
+            <tr [id]="'user-row-' + user.id">
               <td>{{ user.email }}</td>
               <td><span class="badge">{{ roleLabels[user.role] }}</span></td>
               <td>

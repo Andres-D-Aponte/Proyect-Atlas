@@ -31,7 +31,7 @@
               </button>
             </div>
           } @else {
-            <span class="badge category-badge">
+            <span class="badge category-badge" [id]="'category-badge-' + category.id">
               {{ category.name }}
               <button
                 type="button"
@@ -65,7 +65,7 @@
         <button type="button" (click)="createCategory()">+ Crear categoría</button>
       </div>
       @if (categoryFormError()) {
-        <p class="error">{{ categoryFormError() }}</p>
+        <p class="error" id="category-form-error">{{ categoryFormError() }}</p>
       }
     </section>
 
@@ -149,7 +149,7 @@
       </div>
       <p class="form-hint"><span class="required-marker">*</span> Campo obligatorio.</p>
       @if (serviceFormError()) {
-        <p class="error">{{ serviceFormError() }}</p>
+        <p class="error" id="service-form-error">{{ serviceFormError() }}</p>
       }
       <button type="button" [disabled]="creatingService()" (click)="createService()">
         @if (creatingService()) {
@@ -179,7 +179,7 @@
           <tbody>
             @for (service of services(); track service.id) {
               @if (editingServiceId() === service.id) {
-                <tr class="service-edit-row">
+                <tr class="service-edit-row" [id]="'service-edit-row-' + service.id">
                   <td colspan="7">
                     <div class="service-grid">
                       <label>
@@ -288,7 +288,7 @@
                   </td>
                 </tr>
               } @else {
-                <tr>
+                <tr [id]="'service-row-' + service.id">
                   <td>{{ service.name }}</td>
                   <td>
                     @if (service.category) {

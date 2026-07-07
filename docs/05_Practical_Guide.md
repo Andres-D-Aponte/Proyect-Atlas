@@ -168,6 +168,8 @@ Se corrigió en todos los formularios de alta existentes (Clientes, Servicios, C
 
 Para verlo tú mismo: entra a cualquier pantalla con un formulario de "crear" y presiona el botón sin llenar nada — debe explicarte exactamente qué falta, nunca quedarse callado.
 
+**Autoscroll (regla permanente relacionada, pedida el 2026-07-07):** además de mostrar el mensaje, la pantalla hace scroll automático y suave hasta él (o hasta el elemento recién creado/editado) — para que nunca haya que buscarlo manualmente en una tabla o formulario largo. Helper compartido: `core/utils/scroll.ts` (`scrollToId`). Aplicado en Clientes (error, cliente creado, fila de edición/historial), Servicios y Categorías (error, elemento creado, fila de edición), Sucursales (error, sucursal creada, editor de horario), Usuarios (error, usuario creado) y Empresas (error, empresa creada, formulario de crear admin).
+
 ---
 
 ## Cómo ver las tablas y los datos de la base de datos

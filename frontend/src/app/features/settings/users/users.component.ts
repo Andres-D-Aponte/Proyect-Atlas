@@ -5,6 +5,7 @@ import { Role } from '../../../core/models/auth.model';
 import { ASSIGNABLE_ROLE_OPTIONS, CompanyUser, ROLE_LABELS } from '../../../core/models/users.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { UsersService } from '../../../core/services/users.service';
+import { scrollToId } from '../../../core/utils/scroll';
 import { AppShellComponent } from '../../../shared/components/app-shell/app-shell.component';
 
 @Component({
@@ -54,13 +55,14 @@ export class UsersComponent implements OnInit {
 
     if (missing.length > 0) {
       this.formError.set(`Falta completar ${missing.join(' y ')} para crear el usuario.`);
+      scrollToId('user-form-error');
       return;
     }
 
     this.formError.set(null);
     this.creating.set(true);
     try {
-      await this.usersService.create({
+      const created = await this.usersService.create({
         email: this.newEmail.trim(),
         password: this.newPassword,
         role: this.newRole,
@@ -68,6 +70,7 @@ export class UsersComponent implements OnInit {
       this.newEmail = '';
       this.newPassword = '';
       await this.reload();
+      scrollToId(`user-row-${created.id}`);
     } catch {
       // El interceptor global ya mostró el toast con el motivo del error.
     } finally {
