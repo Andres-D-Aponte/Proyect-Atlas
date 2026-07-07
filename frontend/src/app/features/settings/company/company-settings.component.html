@@ -12,7 +12,9 @@
     <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
     <a routerLink="/settings/users" routerLinkActive="active">Usuarios</a>
     <a routerLink="/settings/services" routerLinkActive="active">Servicios</a>
+    <a routerLink="/settings/professionals" routerLinkActive="active">Profesionales</a>
     <a routerLink="/clients" routerLinkActive="active">Clientes</a>
+    <a routerLink="/agenda" routerLinkActive="active">Agenda</a>
   </nav>
 
   @if (loading()) {
@@ -93,6 +95,20 @@
           <label class="checkbox">
             <input type="checkbox" formControlName="allowBookingWithoutClient" />
             Permitir reservas sin cliente registrado
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Agenda</legend>
+        <div class="checkbox-grid">
+          <label class="checkbox">
+            <input type="checkbox" formControlName="requireAppointmentApproval" />
+            Las citas nuevas quedan pendientes hasta ser confirmadas por el staff
+          </label>
+          <label>
+            Alertar tras esta cantidad de inasistencias de un cliente
+            <input type="number" min="1" formControlName="noShowAlertThreshold" />
           </label>
         </div>
       </fieldset>

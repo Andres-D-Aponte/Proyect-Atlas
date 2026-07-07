@@ -34,4 +34,15 @@ export class PlatformService {
       }),
     );
   }
+
+  setAgendaPolicy(
+    companyId: number,
+    allowProfessionalChangeOnAppointment: boolean,
+  ): Promise<Company> {
+    return firstValueFrom(
+      this.http.patch<Company>(`${API_BASE_URL}/platform/companies/${companyId}/agenda-policy`, {
+        allowProfessionalChangeOnAppointment,
+      }),
+    );
+  }
 }

@@ -117,6 +117,14 @@ export class CompaniesComponent implements OnInit {
     }
   }
 
+  async toggleAgendaPolicy(company: Company): Promise<void> {
+    const updated = await this.platformService.setAgendaPolicy(
+      company.id,
+      !company.allowProfessionalChangeOnAppointment,
+    );
+    this.companies.set(this.companies().map((c) => (c.id === company.id ? updated : c)));
+  }
+
   async logout(): Promise<void> {
     await this.authService.logout();
     await this.router.navigateByUrl('/login');

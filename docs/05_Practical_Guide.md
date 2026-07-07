@@ -580,3 +580,45 @@ npm run lint
 npm run build
 npm test -- --watch=false
 ```
+
+### Etapa 8 — Agenda ⭐
+
+**Qué se construyó:** el módulo central del sistema — profesionales con horario semanal por sucursal y bloqueos (almuerzo, capacitación, vacaciones), citas con sus 8 estados, prevención de doble reserva, cambio de profesional/servicio sobre una cita existente, conteo de inasistencias con alerta visual, lista de espera con oferta automática al cancelarse un turno, calendario de festivos/cierres y recursos (sillas, salas, cabinas…) para servicios que los requieren. Detalle completo en [`docs/modules/08_agenda.md`](modules/08_agenda.md).
+
+**Paso a paso para probarlo tú mismo, desde cero, usando el navegador:**
+
+1. Levanta el entorno si no lo tenías arriba: `docker compose up -d --build`.
+2. Entra como Business Admin de una empresa (impersonando, o con tu propio login real).
+3. Ve a la pestaña **Sucursales** y agrégale un recurso a alguna sucursal (ej. tipo "Silla", nombre "Silla 1") desde el botón "Recursos" de la tarjeta de la sucursal.
+4. Ve a la pestaña **Profesionales** (nueva), crea un profesional, haz clic en "Horario" y agrégale un horario para el día de hoy (ej. 08:00–18:00 en la sucursal que ya tengas creada).
+5. Ve a la pestaña **Agenda** (nueva), crea una cita para ese profesional en un horario dentro de lo que acabas de definir — elige un servicio existente y, si quieres, un cliente. Debe quedar en estado "Confirmada".
+6. Intenta crear una segunda cita para el mismo profesional en un horario que se cruce con la primera: debe rechazarse con un toast rojo explicando el motivo (doble reserva).
+7. En la tabla de citas, cambia el estado de la primera cita a "En atención" y luego a "Finalizada"; haz clic en "Historial" para ver los cambios registrados con fecha y quién los hizo.
+8. Vuelve a **Profesionales**, haz clic en "Bloqueos" del profesional y agrégale un bloqueo de tipo "Almuerzo" cubriendo alguna franja de hoy; luego intenta agendar una cita en esa franja desde Agenda — debe rechazarse.
+9. (Opcional, alerta de inasistencias) Crea otra cita para el mismo cliente y cámbiale el estado a "No asistió" un par de veces hasta alcanzar el umbral configurado en Configuración → Empresa ("Alertar tras esta cantidad de inasistencias"); en la pestaña Clientes debe aparecer una insignia "⚠ Alerta" junto al contador.
+10. (Opcional, lista de espera) En Agenda, agrega una entrada a la lista de espera para el mismo servicio/sucursal, y luego cancela una cita compatible: la entrada debe pasar a estado "Ofrecido".
+11. (Opcional, política de Platform Owner) Desde el panel de Empresas del Platform Owner, usa el interruptor "Cambio de profesional en citas" para bloquearlo, y confirma que intentar cambiar el profesional de una cita desde Agenda ahora se rechaza.
+
+**Qué mirar en la base de datos:**
+
+- Tabla `companies`: `require_appointment_approval`, `no_show_alert_threshold`, `allow_professional_change_on_appointment`.
+- Tabla `professionals`, `professional_schedules`, `professional_blocks`: el profesional creado con su horario y bloqueo.
+- Tabla `resources`: el recurso creado, vinculado a la sucursal.
+- Tabla `appointments`: la(s) cita(s) creadas, con `blocked_until` mayor que `end_at` (incluye el buffer del servicio).
+- Tabla `appointment_history_events`: un evento por cada cambio de estado/profesional/servicio.
+- Tabla `clients`: `no_show_count` incrementado tras marcar "No asistió".
+- Tabla `waitlists`: la entrada creada, con `status` en `OFFERED` tras la cancelación compatible.
+
+**Pruebas automatizadas de esta etapa:**
+
+```bash
+cd backend
+npm test          # 47 pruebas nuevas (124 en total): Professionals/Resources/ScheduleExceptions/Waitlist/Appointments (disponibilidad, estados, no-show, recursos, lista de espera)
+docker compose up -d postgres
+npx jest --config ./test/jest-e2e.json --runInBand  # 13 pruebas nuevas (58 en total)
+
+cd ../frontend
+npm run lint
+npm run build
+npm test -- --watch=false
+```

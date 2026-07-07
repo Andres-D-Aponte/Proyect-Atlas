@@ -51,16 +51,46 @@ enum CommissionType {
 }
 
 /// Tipo genérico de recurso físico reservable (ver PRD sección 3). El
-/// inventario concreto (qué salas/sillas existen en cada sucursal) se
-/// construirá en la Etapa 8 (Agenda), que es la primera que realmente
-/// necesita reservarlos; por ahora un Service solo declara qué *tipo* de
-/// recurso requiere, si aplica.
+/// inventario concreto vive en el modelo `Resource` (Etapa 8); un `Service`
+/// solo declara qué *tipo* de recurso requiere, si aplica.
 enum ResourceType {
   ROOM
   CHAIR
   CABIN
   MACHINE
   STRETCHER
+}
+
+/// Bloqueo explícito sobre la agenda de un profesional (ver PRD sección 4.2):
+/// "se crean bloqueos explícitos... en vez de eliminar horario".
+enum ProfessionalBlockType {
+  LUNCH
+  TRAINING
+  VACATION
+  OTHER
+}
+
+/// Los 8 estados de una cita, tal cual los define el PRD sección 4.2 y el
+/// backlog Épica 8. `WAITING` = cliente en sala de espera (ya llegó, no ha
+/// sido atendido) — no confundir con la lista de espera (`Waitlist`), que es
+/// un concepto totalmente distinto (clientes esperando que se libere un cupo).
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum WaitlistStatus {
+  WAITING
+  OFFERED
+  CONVERTED
+  EXPIRED
+  CANCELLED
 }
 
 /// Llaves primarias: numéricas seriales autoincrementales (`Int @id @default(autoincrement())`),
@@ -80,6 +110,10 @@ model User {
 
   refreshTokens     RefreshToken[]
   impersonationLogs ImpersonationLog[]
+  /// Vínculo opcional Profesional↔Usuario, diferido desde la Etapa 5 hasta
+  /// que existiera `Professional` (Etapa 8). Permite que un profesional
+  /// inicie sesión sin recrear sus datos (ver backlog Épica 5).
+  professional      Professional?
 
   @@map("users")
 }
@@ -127,13 +161,35 @@ model Company {
   requireClientAddress      Boolean @default(false)
   allowBookingWithoutClient Boolean @default(true)
 
-  users             User[]
-  branches          Branch[]
-  license           License?
-  impersonationLogs ImpersonationLog[]
-  serviceCategories ServiceCategory[]
-  services          Service[]
-  clients           Client[]
+  /// Configuración de Agenda (ver PRD sección 4.2).
+  /// Si es true, una cita nueva queda en PENDING y debe confirmarse
+  /// manualmente; si es false, queda CONFIRMED de inmediato. Un solo campo
+  /// cubre a propósito tanto "confirmación automática/manual" como "reserva
+  /// inmediata o con aprobación" — el PRD los describe como dos preguntas
+  /// separadas, pero para el MVP resuelven la misma decisión operativa.
+  requireAppointmentApproval Boolean @default(false)
+  /// Umbral de inasistencias de un cliente antes de mostrar una alerta al
+  /// Business Admin (ver PRD sección 4.2, "Inasistencia").
+  noShowAlertThreshold       Int     @default(3)
+  /// A diferencia de las demás banderas de esta tabla, esta la define el
+  /// Platform Owner por empresa, no el Business Admin — así lo dice el PRD
+  /// sección 4.2 ("el Platform Owner define si una empresa puede o no
+  /// permitirlo"). Por eso no está en `UpdateCompanySettingsDto`, sino en un
+  /// endpoint aparte solo para Platform Owner.
+  allowProfessionalChangeOnAppointment Boolean @default(true)
+
+  users               User[]
+  branches            Branch[]
+  license             License?
+  impersonationLogs   ImpersonationLog[]
+  serviceCategories   ServiceCategory[]
+  services            Service[]
+  clients             Client[]
+  professionals       Professional[]
+  resources           Resource[]
+  scheduleExceptions  ScheduleException[]
+  appointments        Appointment[]
+  waitlistEntries     Waitlist[]
 
   @@map("companies")
 }
@@ -153,6 +209,12 @@ model Branch {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  professionalSchedules ProfessionalSchedule[]
+  resources             Resource[]
+  scheduleExceptions    ScheduleException[]
+  appointments          Appointment[]
+  waitlistEntries       Waitlist[]
 
   @@index([companyId])
   @@map("branches")
@@ -268,6 +330,9 @@ model Service {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  appointments    Appointment[]
+  waitlistEntries Waitlist[]
+
   @@index([companyId])
   @@index([categoryId])
   @@map("services")
@@ -295,7 +360,14 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  timelineEvents ClientTimelineEvent[]
+  /// Se incrementa cada vez que una cita de este cliente se marca NO_SHOW
+  /// (ver PRD sección 4.2, "Inasistencia"). Comparado contra
+  /// `Company.noShowAlertThreshold` para mostrar una alerta.
+  noShowCount Int @default(0)
+
+  timelineEvents  ClientTimelineEvent[]
+  appointments    Appointment[]
+  waitlistEntries Waitlist[]
 
   @@index([companyId])
   @@map("clients")
@@ -321,4 +393,203 @@ model ClientTimelineEvent {
 
   @@index([clientId])
   @@map("client_timeline_events")
+}
+
+/// Persona que presta un servicio (ver PRD sección 3). Puede existir sin
+/// `User` (gestionado solo por recepción) o vincularse a uno para poder
+/// iniciar sesión — vínculo diferido desde la Etapa 5 hasta ahora.
+model Professional {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    Int?     @unique
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schedules          ProfessionalSchedule[]
+  blocks             ProfessionalBlock[]
+  appointments       Appointment[] @relation("PrimaryProfessional")
+  secondAppointments Appointment[] @relation("SecondProfessional")
+  waitlistEntries    Waitlist[]
+
+  @@index([companyId])
+  @@map("professionals")
+}
+
+/// Jornada laboral recurrente de un profesional: puede trabajar horarios
+/// distintos por sucursal y día (ver PRD sección 4.2 y backlog Épica 8). El
+/// "botón de jornada predefinida" que menciona el PRD es un atajo del
+/// frontend que termina generando filas normales de esta tabla — no hace
+/// falta modelarlo aparte.
+model ProfessionalSchedule {
+  id             Int          @id @default(autoincrement())
+  professionalId Int
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  branchId       Int
+  branch         Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  /// 0 = domingo … 6 = sábado (mismo criterio que `Branch.openingHours`).
+  dayOfWeek      Int
+  startsAt       String
+  endsAt         String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([professionalId])
+  @@index([branchId])
+  @@map("professional_schedules")
+}
+
+/// Bloqueo explícito sobre la agenda de un profesional (almuerzo,
+/// capacitación, vacaciones, otro) — nunca se "borra" horario, se bloquea
+/// (ver PRD sección 4.2). Una vacación es solo un bloqueo cuyo rango cubre
+/// varios días; no necesita lógica especial.
+model ProfessionalBlock {
+  id             Int                   @id @default(autoincrement())
+  professionalId Int
+  professional   Professional          @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  type           ProfessionalBlockType
+  startAt        DateTime
+  endAt          DateTime
+  notes          String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([professionalId])
+  @@map("professional_blocks")
+}
+
+/// Instancia concreta de un recurso reservable en una sucursal (ver PRD
+/// sección 3/4.4). Se construye hasta esta etapa porque es la primera que
+/// realmente necesita reservarlos contra un horario (ver docs/modules/06).
+model Resource {
+  id        Int          @id @default(autoincrement())
+  companyId Int
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId  Int
+  branch    Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  type      ResourceType
+  name      String
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  appointments Appointment[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@map("resources")
+}
+
+/// Calendario de excepciones/festivos (ver PRD sección 4.2): un día cerrado,
+/// ya sea de una sucursal puntual (`branchId` presente) o de toda la
+/// empresa (`branchId` nulo). Solo modela cierres de día completo — el PRD
+/// no pide horarios parciales de festivo para el MVP.
+model ScheduleException {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId  Int?
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([branchId])
+  @@map("schedule_exceptions")
+}
+
+/// La cita: el corazón del sistema (ver PRD sección 4.2 y backlog Épica 8).
+/// `endAt` es el fin del servicio (lo que ve el staff); `blockedUntil` es
+/// `endAt` + el buffer del servicio en el momento de crear la cita — se
+/// guarda aparte para que el chequeo de solapamiento sea una comparación de
+/// rangos simple en la base de datos, sin tener que calcularlo en memoria
+/// contra el buffer actual del servicio (que además pudo cambiar después).
+model Appointment {
+  id        Int     @id @default(autoincrement())
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId  Int
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  /// Nulo si la empresa permite reservar sin cliente registrado
+  /// (`Company.allowBookingWithoutClient`).
+  clientId Int?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  professionalId Int
+  professional   Professional @relation("PrimaryProfessional", fields: [professionalId], references: [id])
+  /// Solo si `Service.requiresTwoProfessionals`.
+  secondProfessionalId Int?
+  secondProfessional   Professional? @relation("SecondProfessional", fields: [secondProfessionalId], references: [id])
+  /// Solo si `Service.resourceType` no es nulo.
+  resourceId Int?
+  resource   Resource? @relation(fields: [resourceId], references: [id])
+
+  startAt      DateTime
+  endAt        DateTime
+  blockedUntil DateTime
+
+  status AppointmentStatus @default(PENDING)
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  historyEvents AppointmentHistoryEvent[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([professionalId])
+  @@index([clientId])
+  @@map("appointments")
+}
+
+/// Historial de una cita (ver backlog Épica 8: "el cambio de estado queda
+/// registrado en el historial de la cita con quién lo hizo"). Mismo patrón
+/// que `ClientTimelineEvent` (Etapa 7): descripción ya armada en español,
+/// generada por el servicio, no un enum de tipos de evento.
+model AppointmentHistoryEvent {
+  id            Int         @id @default(autoincrement())
+  appointmentId Int
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  description   String
+  createdAt     DateTime    @default(now())
+
+  @@index([appointmentId])
+  @@map("appointment_history_events")
+}
+
+/// Lista de espera (ver PRD sección 4.2 y backlog Épica 8): si no hay cupo,
+/// el cliente queda aquí; al cancelarse una cita compatible, el primero en
+/// la lista pasa a OFFERED. El envío real de la oferta al cliente (WhatsApp)
+/// depende de la Etapa 11, que todavía no existe — por ahora la oferta
+/// queda visible para que el staff contacte manualmente (ver docs/modules/08).
+model Waitlist {
+  id        Int            @id @default(autoincrement())
+  companyId Int
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId  Int
+  branch    Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  clientId  Int
+  client    Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serviceId Int
+  service   Service        @relation(fields: [serviceId], references: [id])
+  /// Nulo = cualquier profesional sirve.
+  professionalId Int?
+  professional   Professional? @relation(fields: [professionalId], references: [id])
+
+  status    WaitlistStatus @default(WAITING)
+  offeredAt DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([companyId])
+  @@index([branchId])
+  @@map("waitlist_entries")
 }

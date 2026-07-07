@@ -1,0 +1,190 @@
+<app-shell
+  title="Profesionales"
+  [userEmail]="authService.currentUser()?.email ?? null"
+  [showLogout]="true"
+  (logout)="logout()"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
+>
+  <nav class="tabs" shell-tabs>
+    <a routerLink="/settings/company" routerLinkActive="active">Empresa</a>
+    <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
+    <a routerLink="/settings/users" routerLinkActive="active">Usuarios</a>
+    <a routerLink="/settings/services" routerLinkActive="active">Servicios</a>
+    <a routerLink="/settings/professionals" routerLinkActive="active">Profesionales</a>
+    <a routerLink="/clients" routerLinkActive="active">Clientes</a>
+    <a routerLink="/agenda" routerLinkActive="active">Agenda</a>
+  </nav>
+
+  <p class="form-hint">
+    Crea un profesional, define su horario semanal por sucursal y registra bloqueos (almuerzo,
+    capacitación, vacaciones) para que la Agenda evite reservar citas en esos momentos.
+  </p>
+
+  <section class="create-form">
+    <input
+      type="text"
+      placeholder="Nombre del profesional *"
+      [(ngModel)]="newProfessionalName"
+      name="newProfessionalName"
+    />
+    <select [(ngModel)]="newProfessionalUserId" name="newProfessionalUserId">
+      <option [ngValue]="null">Sin usuario para iniciar sesión (opcional)</option>
+      @for (user of unlinkedProfessionalUsers(); track user.id) {
+        <option [ngValue]="user.id">{{ user.email }}</option>
+      }
+    </select>
+    <button type="button" (click)="createProfessional()">+ Crear profesional</button>
+  </section>
+  @if (formError()) {
+    <p class="error" id="professional-form-error">{{ formError() }}</p>
+  }
+
+  @if (loading()) {
+    <p><span class="spinner"></span> Cargando…</p>
+  } @else if (professionals().length === 0) {
+    <div class="empty-state">Todavía no hay profesionales creados.</div>
+  } @else {
+    @for (professional of professionals(); track professional.id) {
+      <div class="card professional-card" [id]="'professional-row-' + professional.id">
+        <div class="professional-header">
+          <div>
+            <strong>{{ professional.name }}</strong>
+            @if (!professional.isActive) {
+              <span class="badge badge-muted">Inactivo</span>
+            }
+          </div>
+          <div class="professional-actions">
+            <button type="button" class="btn-secondary" (click)="editSchedule(professional)">
+              Horario
+            </button>
+            <button type="button" class="btn-secondary" (click)="editBlocks(professional)">
+              Bloqueos
+            </button>
+          </div>
+        </div>
+
+        @if (editingScheduleFor() !== professional.id) {
+          @if (professional.schedules?.length) {
+            <ul class="schedule-summary">
+              @for (row of professional.schedules; track row.id) {
+                <li>
+                  <span class="badge badge-muted">{{ branchName(row.branchId) }}</span>
+                  {{ dayNames[row.dayOfWeek] }} {{ row.startsAt }} – {{ row.endsAt }}
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="no-schedule">Sin horario definido todavía.</p>
+          }
+        }
+
+        @if (editingScheduleFor() === professional.id) {
+          <div class="schedule-editor" [id]="'professional-schedule-editor-' + professional.id">
+            @for (row of draftSchedule(); track $index) {
+              <div class="schedule-row">
+                <select
+                  [ngModel]="row.branchId"
+                  (ngModelChange)="updateScheduleRow($index, 'branchId', $any($event))"
+                  name="branch-{{ $index }}"
+                >
+                  @for (branch of branches(); track branch.id) {
+                    <option [value]="branch.id">{{ branch.name }}</option>
+                  }
+                </select>
+                <select
+                  [ngModel]="row.dayOfWeek"
+                  (ngModelChange)="updateScheduleRow($index, 'dayOfWeek', $any($event))"
+                  name="day-{{ $index }}"
+                >
+                  @for (day of dayNames; track $index) {
+                    <option [value]="$index">{{ day }}</option>
+                  }
+                </select>
+                <input
+                  type="text"
+                  [ngModel]="row.startsAt"
+                  (ngModelChange)="updateScheduleRow($index, 'startsAt', $event)"
+                  name="startsAt-{{ $index }}"
+                  placeholder="09:00"
+                />
+                <span class="schedule-sep">–</span>
+                <input
+                  type="text"
+                  [ngModel]="row.endsAt"
+                  (ngModelChange)="updateScheduleRow($index, 'endsAt', $event)"
+                  name="endsAt-{{ $index }}"
+                  placeholder="18:00"
+                />
+                <button type="button" class="btn-ghost" (click)="removeScheduleRow($index)">✕</button>
+              </div>
+            }
+            <div class="schedule-actions">
+              <button type="button" class="btn-secondary" (click)="addScheduleRow()">+ Añadir horario</button>
+              <button type="button" (click)="saveSchedule()">Guardar horario</button>
+              <button type="button" class="btn-ghost" (click)="cancelSchedule()">Cancelar</button>
+            </div>
+          </div>
+        }
+
+        @if (editingBlocksFor() !== professional.id) {
+          @if (professional.blocks?.length) {
+            <ul class="schedule-summary">
+              @for (block of professional.blocks; track block.id) {
+                <li>
+                  <span class="badge badge-muted">{{ block.type }}</span>
+                  {{ block.startAt | date: 'short' }} – {{ block.endAt | date: 'short' }}
+                  @if (block.notes) {
+                    <em>({{ block.notes }})</em>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @if (editingBlocksFor() === professional.id) {
+          <div class="blocks-editor" [id]="'professional-blocks-editor-' + professional.id">
+            @if (professional.blocks?.length) {
+              <ul class="schedule-summary">
+                @for (block of professional.blocks; track block.id) {
+                  <li>
+                    <span class="badge badge-muted">{{ block.type }}</span>
+                    {{ block.startAt | date: 'short' }} – {{ block.endAt | date: 'short' }}
+                    @if (block.notes) {
+                      <em>({{ block.notes }})</em>
+                    }
+                    <button type="button" class="btn-ghost" (click)="removeBlock(professional, block)">✕</button>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="block-form">
+              <select [(ngModel)]="newBlockType" name="newBlockType">
+                @for (option of blockTypeOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              <input type="datetime-local" [(ngModel)]="newBlockStartAt" name="newBlockStartAt" />
+              <span class="schedule-sep">–</span>
+              <input type="datetime-local" [(ngModel)]="newBlockEndAt" name="newBlockEndAt" />
+              <input
+                type="text"
+                placeholder="Notas (opcional)"
+                [(ngModel)]="newBlockNotes"
+                name="newBlockNotes"
+              />
+              <button type="button" (click)="createBlock(professional)">+ Agregar bloqueo</button>
+              <button type="button" class="btn-ghost" (click)="cancelBlocks()">Cerrar</button>
+            </div>
+            @if (blockFormError()) {
+              <p class="error" [id]="'professional-blocks-error-' + professional.id">
+                {{ blockFormError() }}
+              </p>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+</app-shell>

@@ -7,6 +7,11 @@
   [impersonating]="authService.isImpersonating()"
   (exitImpersonation)="exitImpersonation()"
 >
+  <nav class="tabs" shell-tabs>
+    <a routerLink="/clients" routerLinkActive="active">Clientes</a>
+    <a routerLink="/agenda" routerLinkActive="active">Agenda</a>
+  </nav>
+
   <section class="create-form client-form">
     <h2>Nuevo cliente</h2>
     <div class="client-grid">
@@ -75,6 +80,7 @@
             <th>Teléfono</th>
             <th>Correo</th>
             <th>Documento</th>
+            <th>Inasistencias</th>
             <th></th>
           </tr>
         </thead>
@@ -85,6 +91,12 @@
               <td>{{ client.phone }}</td>
               <td>{{ client.email || '—' }}</td>
               <td>{{ client.document || '—' }}</td>
+              <td>
+                {{ client.noShowCount }}
+                @if (isNoShowAlert(client)) {
+                  <span class="badge badge-alert">⚠ Alerta</span>
+                }
+              </td>
               <td class="actions-cell">
                 <button type="button" class="btn-secondary" (click)="toggleTimeline(client)">
                   Ver historial
@@ -97,7 +109,7 @@
 
             @if (editingClientId() === client.id) {
               <tr class="client-edit-row" [id]="'client-edit-row-' + client.id">
-                <td colspan="5">
+                <td colspan="6">
                   <div class="client-grid">
                     <label>
                       Nombre
@@ -144,7 +156,7 @@
 
             @if (viewingTimelineForId() === client.id) {
               <tr class="client-timeline-row" [id]="'client-timeline-row-' + client.id">
-                <td colspan="5">
+                <td colspan="6">
                   @if (loadingTimeline()) {
                     <p><span class="spinner"></span> Cargando historial…</p>
                   } @else if (timelineEvents().length === 0) {

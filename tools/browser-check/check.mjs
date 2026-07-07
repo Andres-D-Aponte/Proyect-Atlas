@@ -192,55 +192,158 @@ try {
   await page.waitForSelector('.toast-error:has-text("no puede ser mayor a 100")');
   await shot('19-error-toast-validation');
 
-  // Los pasos 18/19 disparan a propósito un 409 y un 400 para probar el sistema
-  // de notificaciones; Chromium los registra como "console error" aunque la app
-  // los manejó correctamente (se ve el toast). Se descuentan para no confundirlos
-  // con errores reales de consola.
-  const expectedNetworkErrors = [
-    'Failed to load resource: the server responded with a status of 409 (Conflict)',
-    'Failed to load resource: the server responded with a status of 400 (Bad Request)',
-  ];
-  for (const expected of expectedNetworkErrors) {
-    const index = consoleErrors.indexOf(expected);
-    if (index !== -1) consoleErrors.splice(index, 1);
-  }
+  step('20) Agregar un recurso a la sucursal creada');
+  await page.click('a:has-text("Sucursales")');
+  await page.waitForURL('**/settings/branches');
+  const branchCard = page.locator('.branch-card', { hasText: 'Sucursal Browser Check' });
+  await branchCard.locator('button:has-text("Recursos")').click();
+  await branchCard.locator('input[name=newResourceName]').fill('Silla Browser Check');
+  await branchCard.locator('button:has-text("+ Agregar recurso")').click();
+  await page.waitForSelector('text=Silla Browser Check');
+  await shot('20-resource-created');
 
-  step('20) Ir a Clientes e intentar crear uno sin datos (debe guiar, no fallar en silencio)');
+  step('21) Crear un profesional con horario abierto toda la semana (00:00–23:59, los 7 días)');
+  await page.click('a:has-text("Profesionales")');
+  await page.waitForURL('**/settings/professionals');
+  await page.fill('input[name=newProfessionalName]', 'Profesional Browser Check');
+  await page.click('button:has-text("Crear profesional")');
+  await page.waitForSelector('text=Profesional Browser Check');
+  const professionalCard = page.locator('.professional-card', { hasText: 'Profesional Browser Check' });
+  await professionalCard.locator('button:has-text("Horario")').click();
+  for (let i = 0; i < 7; i++) {
+    await professionalCard.locator('button:has-text("+ Añadir horario")').click();
+  }
+  const scheduleRows = professionalCard.locator('.schedule-row');
+  for (let i = 0; i < 7; i++) {
+    await scheduleRows.nth(i).locator('select').nth(1).selectOption(String(i));
+    await scheduleRows.nth(i).locator('input').nth(0).fill('00:00');
+    await scheduleRows.nth(i).locator('input').nth(1).fill('23:59');
+  }
+  await professionalCard.locator('button:has-text("Guardar horario")').click();
+  await page.waitForSelector('text=00:00 – 23:59');
+  await shot('21-professional-schedule');
+
+  step('22) Crear un servicio simple (sin recurso) para probar la Agenda');
+  await page.click('a:has-text("Servicios")');
+  await page.waitForURL('**/settings/services');
+  await page.fill('input[name=newServiceName]', 'Corte Agenda');
+  await page.fill('input[name=newServiceDuration]', '30');
+  await page.fill('input[name=newServiceBuffer]', '5');
+  await page.fill('input[name=newServicePrice]', '20000');
+  await page.click('button:has-text("+ Crear servicio")');
+  await page.waitForSelector('text=Corte Agenda');
+  await shot('22-agenda-service-created');
+
+  step('23) Ir a Clientes e intentar crear uno sin datos (debe guiar, no fallar en silencio)');
   await page.click('a:has-text("Clientes")');
   await page.waitForURL('**/clients');
   await page.click('button:has-text("+ Crear cliente")');
   await page.waitForSelector('.client-form .error:has-text("Falta completar el nombre y el teléfono")');
-  await shot('20-client-empty-form-guidance');
+  await shot('23-client-empty-form-guidance');
 
-  step('21) Crear el cliente ya con los datos requeridos');
+  step('24) Crear el cliente ya con los datos requeridos');
   await page.fill('input[name=newClientName]', 'Cliente Browser Check');
   await page.fill('input[name=newClientPhone]', '3001112222');
   await page.click('button:has-text("+ Crear cliente")');
   await page.waitForSelector('text=Cliente Browser Check');
-  await shot('21-client-created');
+  await shot('24-client-created');
 
-  step('22) Buscar el cliente y ver su historial (evento de alta)');
+  step('25) Buscar el cliente y ver su historial (evento de alta)');
   await page.fill('input[name=searchTerm]', 'Browser Check');
   await page.click('button:has-text("Buscar")');
   await page.waitForSelector('text=Cliente Browser Check');
   const clientRow = page.locator('tr', { hasText: 'Cliente Browser Check' });
   await clientRow.locator('button:has-text("Ver historial")').click();
   await page.waitForSelector('text=Cliente registrado.');
-  await shot('22-client-timeline-created');
+  await shot('25-client-timeline-created');
 
-  step('23) Editar el cliente y confirmar el nuevo evento en el historial');
+  step('26) Editar el cliente y confirmar el nuevo evento en el historial');
   await clientRow.locator('button:has-text("Editar")').click();
   await page.fill('input[name=editClientPhone]', '3009998888');
   await page.locator('tr.client-edit-row').locator('button:has-text("Guardar")').click();
   await page.waitForSelector('text=3009998888');
   await clientRow.locator('button:has-text("Ver historial")').click();
   await page.waitForSelector('text=Datos actualizados: teléfono.');
-  await shot('23-client-timeline-updated');
+  await shot('26-client-timeline-updated');
 
-  step('24) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
+  step('27) Agendar una cita para el profesional, servicio y cliente ya creados');
+  await page.click('a:has-text("Agenda")');
+  await page.waitForURL('**/agenda');
+  const now = new Date(Date.now() + 5 * 60_000);
+  const pad = (n) => String(n).padStart(2, '0');
+  const startAtLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  await page.selectOption('select[name=draftBranchId]', { label: 'Sucursal Browser Check' });
+  await page.selectOption('select[name=draftServiceId]', { label: 'Corte Agenda (30 min)' });
+  await page.selectOption('select[name=draftProfessionalId]', { label: 'Profesional Browser Check' });
+  await page.selectOption('select[name=draftClientId]', {
+    label: 'Cliente Browser Check — 3009998888',
+  });
+  await page.fill('input[name=draftStartAt]', startAtLocal);
+  await page.click('button:has-text("+ Agendar cita")');
+  await page.waitForSelector('td:has-text("Corte Agenda")');
+  await shot('27-appointment-created');
+
+  step('28) Intentar una doble reserva para el mismo profesional/horario (debe rechazarse)');
+  await page.selectOption('select[name=draftBranchId]', { label: 'Sucursal Browser Check' });
+  await page.selectOption('select[name=draftServiceId]', { label: 'Corte Agenda (30 min)' });
+  await page.selectOption('select[name=draftProfessionalId]', { label: 'Profesional Browser Check' });
+  await page.fill('input[name=draftStartAt]', startAtLocal);
+  await page.click('button:has-text("+ Agendar cita")');
+  await page.waitForSelector('.toast-error:has-text("ya tiene otra cita")');
+  await shot('28-double-booking-rejected');
+
+  step('29) Cambiar el estado de la cita y ver su historial');
+  const appointmentRow = page.locator('tr', { hasText: 'Corte Agenda' });
+  await appointmentRow.locator('select').selectOption('IN_PROGRESS');
+  await page.waitForFunction(() => {
+    const row = [...document.querySelectorAll('tbody tr')].find((r) =>
+      r.textContent?.includes('Corte Agenda'),
+    );
+    return row?.querySelector('select')?.value === 'IN_PROGRESS';
+  });
+  await appointmentRow.locator('button:has-text("Historial")').click();
+  await page.waitForSelector('.history-list li:has-text("En atención")');
+  await shot('29-appointment-history');
+
+  step('30) Agregar una entrada a la lista de espera y luego cancelarla');
+  const waitlistSection = page.locator('.waitlist-section');
+  await waitlistSection.locator('button:has-text("+ Agregar a lista de espera")').click();
+  await page.selectOption('#waitlist-form select[name=waitlistBranchId]', { label: 'Sucursal Browser Check' });
+  await page.selectOption('#waitlist-form select[name=waitlistClientId]', {
+    label: 'Cliente Browser Check',
+  });
+  await page.selectOption('#waitlist-form select[name=waitlistServiceId]', {
+    label: 'Corte Agenda',
+  });
+  await page.locator('#waitlist-form button:has-text("Agregar")').click();
+  await waitlistSection.locator('.badge:has-text("En espera")').waitFor();
+  await shot('30-waitlist-entry-created');
+
+  await waitlistSection
+    .locator('tr', { hasText: 'Cliente Browser Check' })
+    .locator('button:has-text("Cancelar")')
+    .click();
+  await waitlistSection.locator('.badge:has-text("Cancelado")').waitFor();
+  await shot('31-waitlist-entry-cancelled');
+
+  step('32) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
   await page.click('button:has-text("Salir")');
   await page.waitForURL('**/login');
-  await shot('24-logout-from-business-admin-screen');
+  await shot('32-logout-from-business-admin-screen');
+
+  // Los pasos 18/19/28 disparan a propósito un 409 y dos 400 para probar el
+  // sistema de notificaciones (incluida la validación de doble reserva de
+  // Agenda); Chromium los registra como "console error" aunque la app los
+  // manejó correctamente (se ve el toast). Se descuentan para no confundirlos
+  // con errores reales de consola — se filtran TODAS las ocurrencias, no solo
+  // la primera.
+  const expectedNetworkErrors = [
+    'Failed to load resource: the server responded with a status of 409 (Conflict)',
+    'Failed to load resource: the server responded with a status of 400 (Bad Request)',
+  ];
+  for (let i = consoleErrors.length - 1; i >= 0; i--) {
+    if (expectedNetworkErrors.includes(consoleErrors[i])) consoleErrors.splice(i, 1);
+  }
 
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');

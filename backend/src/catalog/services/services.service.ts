@@ -9,7 +9,7 @@ export class ServicesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(companyId: number, dto: CreateServiceDto): Promise<Service> {
-    if (dto.categoryId !== undefined) {
+    if (dto.categoryId !== undefined && dto.categoryId !== null) {
       await this.assertCategoryBelongsToCompany(companyId, dto.categoryId);
     }
 

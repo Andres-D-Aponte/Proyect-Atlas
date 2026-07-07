@@ -32,4 +32,5 @@ export interface Company {
   name: string;
   isActive: boolean;
   license?: License | null;
+  allowProfessionalChangeOnAppointment: boolean;
 }

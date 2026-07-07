@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
   Client,
   ClientTimelineEvent,
@@ -10,22 +10,25 @@ import {
 } from '../../core/models/clients.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ClientsService } from '../../core/services/clients.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { scrollToId } from '../../core/utils/scroll';
 import { AppShellComponent } from '../../shared/components/app-shell/app-shell.component';
 
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [FormsModule, DatePipe, AppShellComponent],
+  imports: [FormsModule, DatePipe, RouterLink, RouterLinkActive, AppShellComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
 })
 export class ClientsComponent implements OnInit {
   private readonly clientsService = inject(ClientsService);
+  private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
   protected readonly authService = inject(AuthService);
 
   protected readonly clients = signal<Client[]>([]);
+  protected readonly noShowAlertThreshold = signal<number | null>(null);
   protected readonly loading = signal(true);
   protected readonly creating = signal(false);
   protected readonly formError = signal<string | null>(null);
@@ -41,7 +44,16 @@ export class ClientsComponent implements OnInit {
   protected readonly loadingTimeline = signal(false);
 
   async ngOnInit(): Promise<void> {
+    if (this.authService.currentUser()?.role === 'BUSINESS_ADMIN') {
+      const settings = await this.settingsService.getCompanySettings();
+      this.noShowAlertThreshold.set(settings.noShowAlertThreshold);
+    }
     await this.reload();
+  }
+
+  isNoShowAlert(client: Client): boolean {
+    const threshold = this.noShowAlertThreshold();
+    return threshold !== null && client.noShowCount >= threshold;
   }
 
   private async reload(): Promise<void> {

@@ -18,6 +18,7 @@ export interface CreateCompanyUser {
 export const ASSIGNABLE_ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'SUPERVISOR', label: 'Supervisor' },
   { value: 'RECEPTIONIST_CASHIER', label: 'Recepcionista / Cajero' },
+  { value: 'PROFESSIONAL', label: 'Profesional' },
 ];
 
 export const ROLE_LABELS: Record<Role, string> = {

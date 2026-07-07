@@ -108,7 +108,7 @@ describe('UsersService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('listManageableByCompany solo trae Supervisor y Recepcionista/Cajero de la propia empresa', async () => {
+  it('listManageableByCompany solo trae Supervisor, Recepcionista/Cajero y Profesional de la propia empresa', async () => {
     prisma.user.findMany.mockResolvedValue([]);
 
     await service.listManageableByCompany(5);
@@ -116,7 +116,9 @@ describe('UsersService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledWith({
       where: {
         companyId: 5,
-        role: { in: [Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER] },
+        role: {
+          in: [Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER, Role.PROFESSIONAL],
+        },
       },
       orderBy: { id: 'asc' },
     });
@@ -143,7 +145,9 @@ describe('UsersService', () => {
       where: {
         id: 2,
         companyId: 5,
-        role: { in: [Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER] },
+        role: {
+          in: [Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER, Role.PROFESSIONAL],
+        },
       },
     });
     expect(result.isActive).toBe(false);

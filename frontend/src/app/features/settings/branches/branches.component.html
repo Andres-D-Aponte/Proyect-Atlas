@@ -11,7 +11,9 @@
     <a routerLink="/settings/branches" routerLinkActive="active">Sucursales</a>
     <a routerLink="/settings/users" routerLinkActive="active">Usuarios</a>
     <a routerLink="/settings/services" routerLinkActive="active">Servicios</a>
+    <a routerLink="/settings/professionals" routerLinkActive="active">Profesionales</a>
     <a routerLink="/clients" routerLinkActive="active">Clientes</a>
+    <a routerLink="/agenda" routerLinkActive="active">Agenda</a>
   </nav>
 
   <section class="create-form">
@@ -37,9 +39,14 @@
               <span class="branch-address">{{ branch.address }}</span>
             }
           </div>
-          <button type="button" class="btn-secondary" (click)="editSchedule(branch)">
-            Editar horario
-          </button>
+          <div class="branch-actions">
+            <button type="button" class="btn-secondary" (click)="editSchedule(branch)">
+              Editar horario
+            </button>
+            <button type="button" class="btn-secondary" (click)="manageResources(branch)">
+              Recursos
+            </button>
+          </div>
         </div>
 
         @if (editingScheduleFor() !== branch.id) {
@@ -90,6 +97,62 @@
               <button type="button" (click)="saveSchedule()">Guardar horario</button>
               <button type="button" class="btn-ghost" (click)="cancelSchedule()">Cancelar</button>
             </div>
+          </div>
+        }
+
+        @if (managingResourcesFor() !== branch.id) {
+          @if (resourcesForBranch(branch.id).length > 0) {
+            <ul class="schedule-summary">
+              @for (resource of resourcesForBranch(branch.id); track resource.id) {
+                <li>
+                  <span class="badge badge-muted">{{ resource.type }}</span>
+                  {{ resource.name }}
+                  @if (!resource.isActive) {
+                    <span class="badge badge-muted">Inactivo</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @if (managingResourcesFor() === branch.id) {
+          <div class="resources-editor" [id]="'branch-resources-editor-' + branch.id">
+            @if (resourcesForBranch(branch.id).length > 0) {
+              <ul class="schedule-summary">
+                @for (resource of resourcesForBranch(branch.id); track resource.id) {
+                  <li>
+                    <span class="badge badge-muted">{{ resource.type }}</span>
+                    {{ resource.name }}
+                    <button type="button" class="btn-ghost" (click)="toggleResourceActive(resource)">
+                      {{ resource.isActive ? 'Desactivar' : 'Activar' }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="no-schedule">Todavía no hay recursos en esta sucursal.</p>
+            }
+            <div class="resource-form">
+              <select [(ngModel)]="newResourceType" name="newResourceType">
+                @for (option of resourceTypeOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              <input
+                type="text"
+                placeholder="Nombre del recurso *"
+                [(ngModel)]="newResourceName"
+                name="newResourceName"
+              />
+              <button type="button" (click)="createResource(branch)">+ Agregar recurso</button>
+              <button type="button" class="btn-ghost" (click)="cancelResources()">Cerrar</button>
+            </div>
+            @if (resourceFormError()) {
+              <p class="error" [id]="'branch-resources-error-' + branch.id">
+                {{ resourceFormError() }}
+              </p>
+            }
           </div>
         }
       </div>

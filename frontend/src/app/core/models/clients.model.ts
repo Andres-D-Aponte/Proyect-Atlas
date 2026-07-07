@@ -7,6 +7,7 @@ export interface Client {
   document: string | null;
   address: string | null;
   notes: string | null;
+  noShowCount: number;
   createdAt: string;
   updatedAt: string;
 }

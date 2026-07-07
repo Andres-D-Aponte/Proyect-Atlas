@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -24,6 +25,7 @@ import { AssignLicenseDto } from '../licenses/dto/assign-license.dto';
 import { LicensesService } from '../licenses/licenses.service';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
+import { UpdateAgendaPolicyDto } from './dto/update-agenda-policy.dto';
 import { ImpersonateDto } from '../impersonation/dto/impersonate.dto';
 
 @ApiTags('Platform / Companies')
@@ -73,6 +75,14 @@ export class CompaniesController {
     @Body() dto: CreateBusinessAdminDto,
   ): Promise<SafeUser> {
     return this.usersService.createBusinessAdmin(id, dto);
+  }
+
+  @Patch(':id/agenda-policy')
+  setAgendaPolicy(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateAgendaPolicyDto,
+  ): Promise<Company> {
+    return this.companiesService.setAgendaPolicy(id, dto);
   }
 
   @Post(':id/impersonate')

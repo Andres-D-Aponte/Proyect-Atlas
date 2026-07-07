@@ -63,6 +63,8 @@ export interface CompanySettings {
   requireClientDocument: boolean;
   requireClientAddress: boolean;
   allowBookingWithoutClient: boolean;
+  requireAppointmentApproval: boolean;
+  noShowAlertThreshold: number;
 }
 
 export interface UpdateCompanySettings {
@@ -76,6 +78,8 @@ export interface UpdateCompanySettings {
   requireClientDocument?: boolean;
   requireClientAddress?: boolean;
   allowBookingWithoutClient?: boolean;
+  requireAppointmentApproval?: boolean;
+  noShowAlertThreshold?: number;
 }
 
 export interface OpeningHour {

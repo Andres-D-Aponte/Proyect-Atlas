@@ -1,0 +1,68 @@
+.professional-card {
+  margin-bottom: 1rem;
+}
+
+.professional-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  strong {
+    font-size: 1rem;
+    margin-right: 0.5rem;
+  }
+}
+
+.professional-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.no-schedule {
+  margin: 0.6rem 0 0;
+  color: var(--text-subtle);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.schedule-summary {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.schedule-editor,
+.blocks-editor {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.schedule-row,
+.block-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+
+  input[type='text'] {
+    max-width: 6rem;
+  }
+}
+
+.schedule-sep {
+  color: var(--text-subtle);
+}
+
+.schedule-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}

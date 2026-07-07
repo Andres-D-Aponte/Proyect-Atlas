@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Company } from '../../../generated/prisma';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
+import { UpdateAgendaPolicyDto } from './dto/update-agenda-policy.dto';
 
 @Injectable()
 export class CompaniesService {
@@ -29,5 +30,19 @@ export class CompaniesService {
     }
 
     return company;
+  }
+
+  async setAgendaPolicy(
+    id: number,
+    dto: UpdateAgendaPolicyDto,
+  ): Promise<Company> {
+    await this.findByIdOrThrow(id);
+    return this.prisma.company.update({
+      where: { id },
+      data: {
+        allowProfessionalChangeOnAppointment:
+          dto.allowProfessionalChangeOnAppointment,
+      },
+    });
   }
 }

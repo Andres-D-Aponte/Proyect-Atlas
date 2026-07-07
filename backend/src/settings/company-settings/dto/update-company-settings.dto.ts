@@ -3,11 +3,13 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsUrl,
   Length,
   Matches,
+  Min,
 } from 'class-validator';
 import { PaymentMethod } from '../../../../generated/prisma';
 
@@ -92,4 +94,25 @@ export class UpdateCompanySettingsDto {
     message: 'allowBookingWithoutClient debe ser verdadero o falso',
   })
   allowBookingWithoutClient?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Si es verdadero, las citas nuevas quedan en estado Pendiente hasta ser confirmadas por el staff.',
+  })
+  @IsOptional()
+  @IsBoolean({
+    message: 'requireAppointmentApproval debe ser verdadero o falso',
+  })
+  requireAppointmentApproval?: boolean;
+
+  @ApiPropertyOptional({
+    example: 3,
+    description:
+      'Número de inasistencias a partir del cual se alerta al staff sobre un cliente.',
+  })
+  @IsOptional()
+  @IsInt({ message: 'noShowAlertThreshold debe ser un número entero' })
+  @Min(1, { message: 'noShowAlertThreshold debe ser al menos 1' })
+  noShowAlertThreshold?: number;
 }

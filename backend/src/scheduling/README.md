@@ -1,5 +1,3 @@
 # Dominio Agenda
 
-Pendiente de implementación (Etapa 8 — Agenda, el corazón del sistema). Contendrá `Appointment`, horarios/jornadas de `Professional`, bloqueos, disponibilidad, lista de espera y recordatorios.
-
-Ver `docs/01_Product_Requirements_Document.md` sección 4.2, y `docs/02_Architecture.md` sección 3.
+Implementado en la Etapa 8. Ver `docs/modules/08_agenda.md` para el detalle completo (alcance, decisiones técnicas, endpoints, permisos) y `docs/01_Product_Requirements_Document.md` sección 4.2.

@@ -47,6 +47,8 @@ export class CompanySettingsComponent implements OnInit {
     requireClientDocument: [false],
     requireClientAddress: [false],
     allowBookingWithoutClient: [true],
+    requireAppointmentApproval: [false],
+    noShowAlertThreshold: [3],
   });
 
   protected readonly selectedPaymentMethods = signal<Set<PaymentMethod>>(new Set());
@@ -64,6 +66,8 @@ export class CompanySettingsComponent implements OnInit {
       requireClientDocument: settings.requireClientDocument,
       requireClientAddress: settings.requireClientAddress,
       allowBookingWithoutClient: settings.allowBookingWithoutClient,
+      requireAppointmentApproval: settings.requireAppointmentApproval,
+      noShowAlertThreshold: settings.noShowAlertThreshold,
     });
     this.selectedPaymentMethods.set(new Set(settings.enabledPaymentMethods));
     this.loading.set(false);
@@ -99,6 +103,8 @@ export class CompanySettingsComponent implements OnInit {
       requireClientDocument: raw.requireClientDocument ?? undefined,
       requireClientAddress: raw.requireClientAddress ?? undefined,
       allowBookingWithoutClient: raw.allowBookingWithoutClient ?? undefined,
+      requireAppointmentApproval: raw.requireAppointmentApproval ?? undefined,
+      noShowAlertThreshold: raw.noShowAlertThreshold ?? undefined,
     });
 
     this.saving.set(false);

@@ -1,0 +1,255 @@
+<app-shell
+  title="Agenda"
+  subtitle="Citas y lista de espera de tu empresa"
+  [userEmail]="authService.currentUser()?.email ?? null"
+  [showLogout]="true"
+  (logout)="logout()"
+  [impersonating]="authService.isImpersonating()"
+  (exitImpersonation)="exitImpersonation()"
+>
+  <nav class="tabs" shell-tabs>
+    <a routerLink="/clients" routerLinkActive="active">Clientes</a>
+    <a routerLink="/agenda" routerLinkActive="active">Agenda</a>
+  </nav>
+
+  <p class="form-hint">
+    Agenda una cita eligiendo sucursal, servicio, profesional y cliente. El sistema valida
+    automáticamente el horario del profesional, sus bloqueos y evita citas dobles.
+  </p>
+
+  <section class="create-form agenda-form">
+    <h2>Nueva cita</h2>
+    <div class="agenda-grid">
+      <label>
+        Sucursal <span class="required-marker">*</span>
+        <select [(ngModel)]="draft.branchId" name="draftBranchId">
+          <option [ngValue]="null">Selecciona…</option>
+          @for (branch of branches(); track branch.id) {
+            <option [ngValue]="branch.id">{{ branch.name }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Servicio <span class="required-marker">*</span>
+        <select [(ngModel)]="draft.serviceId" name="draftServiceId">
+          <option [ngValue]="null">Selecciona…</option>
+          @for (service of services(); track service.id) {
+            <option [ngValue]="service.id">{{ service.name }} ({{ service.durationMinutes }} min)</option>
+          }
+        </select>
+      </label>
+      <label>
+        Profesional <span class="required-marker">*</span>
+        <select [(ngModel)]="draft.professionalId" name="draftProfessionalId">
+          <option [ngValue]="null">Selecciona…</option>
+          @for (professional of professionals(); track professional.id) {
+            <option [ngValue]="professional.id">{{ professional.name }}</option>
+          }
+        </select>
+      </label>
+      @if (selectedService()?.requiresTwoProfessionals) {
+        <label>
+          Segundo profesional <span class="required-marker">*</span>
+          <select [(ngModel)]="draft.secondProfessionalId" name="draftSecondProfessionalId">
+            <option [ngValue]="null">Selecciona…</option>
+            @for (professional of professionals(); track professional.id) {
+              <option [ngValue]="professional.id">{{ professional.name }}</option>
+            }
+          </select>
+        </label>
+      }
+      <label>
+        Cliente
+        <select [(ngModel)]="draft.clientId" name="draftClientId">
+          <option [ngValue]="null">Sin cliente (según política de la empresa)</option>
+          @for (client of clients(); track client.id) {
+            <option [ngValue]="client.id">{{ client.name }} — {{ client.phone }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Fecha y hora <span class="required-marker">*</span>
+        <input type="datetime-local" [(ngModel)]="draft.startAt" name="draftStartAt" />
+      </label>
+      <label class="notes-field">
+        Notas
+        <input type="text" placeholder="Opcional" [(ngModel)]="draft.notes" name="draftNotes" />
+      </label>
+    </div>
+    <button type="button" (click)="createAppointment()">+ Agendar cita</button>
+  </section>
+  @if (formError()) {
+    <p class="error" id="appointment-form-error">{{ formError() }}</p>
+  }
+
+  <section class="filters">
+    <label>
+      Filtrar por sucursal
+      <select [(ngModel)]="filterBranchId" name="filterBranchId" (ngModelChange)="applyFilters()">
+        <option [ngValue]="null">Todas</option>
+        @for (branch of branches(); track branch.id) {
+          <option [ngValue]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Filtrar por estado
+      <select [(ngModel)]="filterStatus" name="filterStatus" (ngModelChange)="applyFilters()">
+        <option value="">Todos</option>
+        @for (option of statusOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+  </section>
+
+  @if (loading()) {
+    <p><span class="spinner"></span> Cargando…</p>
+  } @else if (appointments().length === 0) {
+    <div class="empty-state">No hay citas que coincidan con los filtros.</div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha/hora</th>
+            <th>Sucursal</th>
+            <th>Cliente</th>
+            <th>Servicio</th>
+            <th>Profesional</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (appointment of appointments(); track appointment.id) {
+            <tr [id]="'appointment-row-' + appointment.id">
+              <td>{{ appointment.startAt | date: 'short' }}</td>
+              <td>{{ branchName(appointment.branchId) }}</td>
+              <td>{{ appointment.client?.name ?? '—' }}</td>
+              <td>{{ appointment.service?.name }}</td>
+              <td>
+                {{ appointment.professional?.name }}
+                @if (appointment.secondProfessional) {
+                  + {{ appointment.secondProfessional.name }}
+                }
+              </td>
+              <td>
+                <select
+                  [ngModel]="appointment.status"
+                  (ngModelChange)="changeStatus(appointment, $any($event))"
+                  name="status-{{ appointment.id }}"
+                >
+                  @for (option of statusOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                <button type="button" class="btn-ghost" (click)="toggleHistory(appointment)">
+                  Historial
+                </button>
+              </td>
+            </tr>
+            @if (expandedAppointmentId() === appointment.id) {
+              <tr class="history-row" [id]="'appointment-history-' + appointment.id">
+                <td colspan="7">
+                  @if (appointment.historyEvents?.length) {
+                    <ul class="history-list">
+                      @for (event of appointment.historyEvents; track event.id) {
+                        <li>
+                          <span class="history-date">{{ event.createdAt | date: 'short' }}</span>
+                          {{ event.description }}
+                        </li>
+                      }
+                    </ul>
+                  } @else {
+                    <p class="no-schedule">Sin eventos de historial.</p>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <section class="waitlist-section">
+    <div class="waitlist-header">
+      <h2>Lista de espera</h2>
+      <button type="button" class="btn-secondary" (click)="openWaitlistForm()">
+        + Agregar a lista de espera
+      </button>
+    </div>
+
+    @if (showWaitlistForm()) {
+      <div class="create-form" id="waitlist-form">
+        <select [(ngModel)]="waitlistBranchId" name="waitlistBranchId">
+          <option [ngValue]="null">Sucursal *</option>
+          @for (branch of branches(); track branch.id) {
+            <option [ngValue]="branch.id">{{ branch.name }}</option>
+          }
+        </select>
+        <select [(ngModel)]="waitlistClientId" name="waitlistClientId">
+          <option [ngValue]="null">Cliente *</option>
+          @for (client of clients(); track client.id) {
+            <option [ngValue]="client.id">{{ client.name }}</option>
+          }
+        </select>
+        <select [(ngModel)]="waitlistServiceId" name="waitlistServiceId">
+          <option [ngValue]="null">Servicio *</option>
+          @for (service of services(); track service.id) {
+            <option [ngValue]="service.id">{{ service.name }}</option>
+          }
+        </select>
+        <select [(ngModel)]="waitlistProfessionalId" name="waitlistProfessionalId">
+          <option [ngValue]="null">Cualquier profesional</option>
+          @for (professional of professionals(); track professional.id) {
+            <option [ngValue]="professional.id">{{ professional.name }}</option>
+          }
+        </select>
+        <button type="button" (click)="createWaitlistEntry()">Agregar</button>
+        <button type="button" class="btn-ghost" (click)="cancelWaitlistForm()">Cancelar</button>
+      </div>
+      @if (waitlistFormError()) {
+        <p class="error" id="waitlist-form-error">{{ waitlistFormError() }}</p>
+      }
+    }
+
+    @if (waitlist().length === 0) {
+      <div class="empty-state">No hay clientes en lista de espera.</div>
+    } @else {
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Profesional</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of waitlist(); track entry.id) {
+              <tr [id]="'waitlist-row-' + entry.id">
+                <td>{{ entry.client?.name }}</td>
+                <td>{{ entry.service?.name }}</td>
+                <td>{{ entry.professional?.name ?? 'Cualquiera' }}</td>
+                <td><span class="badge badge-muted">{{ waitlistStatusLabels[entry.status] }}</span></td>
+                <td>
+                  @if (entry.status === 'WAITING' || entry.status === 'OFFERED') {
+                    <button type="button" class="btn-ghost" (click)="cancelWaitlistEntry(entry)">
+                      Cancelar
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</app-shell>

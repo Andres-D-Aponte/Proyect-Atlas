@@ -30,6 +30,7 @@
             <th>Id</th>
             <th>Nombre</th>
             <th>Licencia</th>
+            <th>Cambio de profesional en citas</th>
             <th></th>
           </tr>
         </thead>
@@ -45,6 +46,16 @@
                   <span class="badge badge-muted">Sin licencia</span>
                 }
               </td>
+              <td>
+                <label class="toggle-label">
+                  <input
+                    type="checkbox"
+                    [checked]="company.allowProfessionalChangeOnAppointment"
+                    (change)="toggleAgendaPolicy(company)"
+                  />
+                  {{ company.allowProfessionalChangeOnAppointment ? 'Permitido' : 'Bloqueado' }}
+                </label>
+              </td>
               <td class="actions-cell">
                 <button type="button" class="btn-secondary" (click)="impersonate(company)">
                   Entrar como Business Admin
@@ -56,7 +67,7 @@
             </tr>
             @if (creatingAdminFor() === company.id) {
               <tr class="admin-form-row" [id]="'admin-form-row-' + company.id">
-                <td colspan="4">
+                <td colspan="5">
                   <div class="inline-form">
                     <input
                       type="email"

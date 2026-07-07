@@ -4,6 +4,7 @@ import { ClientsModule } from './clients/clients.module';
 import { AuthModule } from './people/auth/auth.module';
 import { UsersModule } from './people/users/users.module';
 import { PlatformModule } from './platform/platform.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 import { SettingsModule } from './settings/settings.module';
 import { AppConfigModule } from './shared/config/config.module';
 import { HealthModule } from './shared/health/health.module';
@@ -22,6 +23,7 @@ import { TenancyModule } from './shared/tenancy/tenancy.module';
     SettingsModule,
     CatalogModule,
     ClientsModule,
+    SchedulingModule,
   ],
 })
 export class AppModule {}

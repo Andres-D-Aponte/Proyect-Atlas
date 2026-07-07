@@ -32,7 +32,7 @@ export class CreateServiceDto {
   @IsOptional()
   @IsInt({ message: 'La categoría no es válida' })
   @IsPositive({ message: 'La categoría no es válida' })
-  categoryId?: number;
+  categoryId?: number | null;
 
   @ApiProperty({
     example: 30,

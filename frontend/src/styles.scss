@@ -534,6 +534,12 @@ button,
   color: var(--text-muted);
 }
 
+.badge-alert {
+  background: var(--error-soft);
+  color: var(--error);
+  margin-left: 0.4rem;
+}
+
 .empty-state {
   padding: 3rem 1.5rem;
   text-align: center;

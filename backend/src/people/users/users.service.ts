@@ -11,7 +11,11 @@ import { CreateCompanyUserDto } from './dto/create-company-user.dto';
 
 export type SafeUser = Omit<User, 'passwordHash'>;
 
-const MANAGEABLE_ROLES = [Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER];
+const MANAGEABLE_ROLES = [
+  Role.SUPERVISOR,
+  Role.RECEPTIONIST_CASHIER,
+  Role.PROFESSIONAL,
+];
 
 @Injectable()
 export class UsersService {
@@ -44,7 +48,7 @@ export class UsersService {
     return this.createUser(dto.email, dto.password, dto.role, companyId);
   }
 
-  /** Solo trae Supervisor / Recepcionista-Cajero: es lo que un Business Admin administra desde esta pantalla. */
+  /** Solo trae Supervisor / Recepcionista-Cajero / Profesional: es lo que un Business Admin administra desde esta pantalla. */
   async listManageableByCompany(companyId: number): Promise<SafeUser[]> {
     const users = await this.prisma.user.findMany({
       where: { companyId, role: { in: MANAGEABLE_ROLES } },

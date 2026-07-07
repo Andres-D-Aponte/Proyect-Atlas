@@ -80,6 +80,24 @@ describe('ServicesService', () => {
     expect(prisma.service.create).toHaveBeenCalled();
   });
 
+  it('crea un servicio con categoryId null sin validar nada extra', async () => {
+    prisma.service.create.mockResolvedValue({
+      id: 1,
+      companyId: 1,
+      categoryId: null,
+    });
+
+    await service.create(1, {
+      name: 'Corte',
+      durationMinutes: 30,
+      price: 35000,
+      categoryId: null,
+    });
+
+    expect(prisma.serviceCategory.findFirst).not.toHaveBeenCalled();
+    expect(prisma.service.create).toHaveBeenCalled();
+  });
+
   it('rechaza crear un servicio con una categoría de otra empresa', async () => {
     prisma.serviceCategory.findFirst.mockResolvedValue(null);
 
