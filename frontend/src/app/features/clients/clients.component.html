@@ -11,11 +11,11 @@
     <h2>Nuevo cliente</h2>
     <div class="client-grid">
       <label>
-        Nombre
+        Nombre <span class="required-marker">*</span>
         <input type="text" [(ngModel)]="newClient.name" name="newClientName" />
       </label>
       <label>
-        Teléfono
+        Teléfono <span class="required-marker">*</span>
         <input type="text" [(ngModel)]="newClient.phone" name="newClientPhone" />
       </label>
       <label>
@@ -35,6 +35,13 @@
         <input type="text" [(ngModel)]="newClient.notes" name="newClientNotes" />
       </label>
     </div>
+    <p class="form-hint">
+      <span class="required-marker">*</span> Campo obligatorio. Correo, documento y dirección solo son
+      obligatorios si tu empresa lo exige en Configuración → Empresa.
+    </p>
+    @if (formError()) {
+      <p class="error">{{ formError() }}</p>
+    }
     <button type="button" [disabled]="creating()" (click)="createClient()">
       @if (creating()) {
         <span class="spinner"></span> Creando…

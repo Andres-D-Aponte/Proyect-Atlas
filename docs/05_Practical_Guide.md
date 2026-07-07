@@ -155,6 +155,19 @@ Aparte, se corrigió una condición de carrera real que podía cerrar la sesión
 - **Arreglado también en el backend** (`people/auth/refresh-token.service.ts`): la revocación del refresh token ahora es atómica (`updateMany` condicionado a que siga sin revocar, no un `update` simple), para que dos peticiones concurrentes con el mismo token nunca puedan "ganar" las dos a la vez — cierra el mismo hueco incluso si el usuario tiene dos pestañas abiertas con la misma sesión.
 - El refresh token dura 30 días (`REFRESH_TOKEN_TTL_DAYS`) — de sobra para "horas sin tocar la pantalla"; el problema nunca fue la duración, sino esta carrera al retomar actividad.
 
+### Guía de campos obligatorios (nunca fallar en silencio)
+
+El usuario reportó un bug real: en el formulario de "Nuevo cliente", si lo dejabas vacío (o solo ponías el nombre) y presionabas "+ Crear cliente", no pasaba nada — sin mensaje, sin pista de qué faltaba. La causa raíz era un patrón repetido en varios formularios: `if (!campo.trim()) { return; }`, que corta la ejecución en silencio.
+
+**Regla permanente del proyecto** (guardada en memoria, aplica a todo lo que sigue construyéndose): cualquier campo configurable o digitable debe guiar al usuario — fácil lectura, aprendizaje rápido, resultados guiados y señalizados. Nunca un `return` silencioso.
+
+Se corrigió en todos los formularios de alta existentes (Clientes, Servicios, Categorías, Sucursales, Usuarios, Empresas, crear Business Admin, Login):
+- Los campos obligatorios llevan un asterisco (`*`) en su etiqueta o placeholder, con una leyenda "* Campo obligatorio" cerca del botón.
+- Si falta algo al enviar, aparece un mensaje específico en rojo (ej. "Falta completar el nombre y el teléfono para crear el cliente."), no un fallo silencioso.
+- En Login (que sí usa Reactive Forms con `Validators`), además se señaliza el campo exacto: borde rojo (`.ng-invalid.ng-touched`, regla global en `styles.scss`) y un mensaje específico debajo de cada input inválido.
+
+Para verlo tú mismo: entra a cualquier pantalla con un formulario de "crear" y presiona el botón sin llenar nada — debe explicarte exactamente qué falta, nunca quedarse callado.
+
 ---
 
 ## Cómo ver las tablas y los datos de la base de datos

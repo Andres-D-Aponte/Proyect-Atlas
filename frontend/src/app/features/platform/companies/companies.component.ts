@@ -21,10 +21,12 @@ export class CompaniesComponent implements OnInit {
   protected readonly companies = signal<Company[]>([]);
   protected readonly loading = signal(false);
   protected newCompanyName = '';
+  protected readonly companyFormError = signal<string | null>(null);
 
   protected readonly creatingAdminFor = signal<number | null>(null);
   protected newAdminEmail = '';
   protected newAdminPassword = '';
+  protected readonly adminFormError = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -45,9 +47,11 @@ export class CompaniesComponent implements OnInit {
 
   async createCompany(): Promise<void> {
     if (!this.newCompanyName.trim()) {
+      this.companyFormError.set('Escribe un nombre para la empresa.');
       return;
     }
 
+    this.companyFormError.set(null);
     await this.platformService.createCompany(this.newCompanyName.trim());
     this.newCompanyName = '';
     await this.reload();
@@ -71,6 +75,7 @@ export class CompaniesComponent implements OnInit {
   startCreatingAdmin(company: Company): void {
     this.newAdminEmail = '';
     this.newAdminPassword = '';
+    this.adminFormError.set(null);
     this.creatingAdminFor.set(company.id);
   }
 
@@ -79,10 +84,22 @@ export class CompaniesComponent implements OnInit {
   }
 
   async createAdmin(company: Company): Promise<void> {
-    if (!this.newAdminEmail.trim() || !this.newAdminPassword.trim()) {
+    const missing: string[] = [];
+    if (!this.newAdminEmail.trim()) {
+      missing.push('el correo');
+    }
+    if (!this.newAdminPassword.trim()) {
+      missing.push('la contraseña');
+    } else if (this.newAdminPassword.trim().length < 8) {
+      missing.push('una contraseña de al menos 8 caracteres');
+    }
+
+    if (missing.length > 0) {
+      this.adminFormError.set(`Falta completar ${missing.join(' y ')} para crear el Business Admin.`);
       return;
     }
 
+    this.adminFormError.set(null);
     try {
       await this.platformService.createBusinessAdmin(
         company.id,

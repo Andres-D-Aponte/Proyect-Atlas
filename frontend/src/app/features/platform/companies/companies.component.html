@@ -8,12 +8,15 @@
   <section class="create-form">
     <input
       type="text"
-      placeholder="Nombre de la nueva empresa"
+      placeholder="Nombre de la nueva empresa *"
       [(ngModel)]="newCompanyName"
       name="newCompanyName"
     />
     <button type="button" (click)="createCompany()">+ Crear empresa</button>
   </section>
+  @if (companyFormError()) {
+    <p class="error">{{ companyFormError() }}</p>
+  }
 
   @if (loading()) {
     <p><span class="spinner"></span> Cargando…</p>
@@ -57,13 +60,13 @@
                   <div class="inline-form">
                     <input
                       type="email"
-                      placeholder="Correo del Business Admin"
+                      placeholder="Correo del Business Admin *"
                       [(ngModel)]="newAdminEmail"
                       name="newAdminEmail"
                     />
                     <input
                       type="password"
-                      placeholder="Contraseña inicial"
+                      placeholder="Contraseña inicial * (mín. 8 caracteres)"
                       [(ngModel)]="newAdminPassword"
                       name="newAdminPassword"
                     />
@@ -72,6 +75,9 @@
                       Cancelar
                     </button>
                   </div>
+                  @if (adminFormError()) {
+                    <p class="error">{{ adminFormError() }}</p>
+                  }
                 </td>
               </tr>
             }

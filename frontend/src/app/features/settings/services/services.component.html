@@ -64,13 +64,16 @@
         />
         <button type="button" (click)="createCategory()">+ Crear categoría</button>
       </div>
+      @if (categoryFormError()) {
+        <p class="error">{{ categoryFormError() }}</p>
+      }
     </section>
 
     <section class="create-form service-form">
       <h2>Nuevo servicio</h2>
       <div class="service-grid">
         <label>
-          Nombre
+          Nombre <span class="required-marker">*</span>
           <input type="text" [(ngModel)]="newService.name" name="newServiceName" />
         </label>
         <label>
@@ -83,7 +86,7 @@
           </select>
         </label>
         <label>
-          Duración (min)
+          Duración (min) <span class="required-marker">*</span>
           <input
             type="number"
             min="1"
@@ -144,6 +147,10 @@
           <input type="text" [(ngModel)]="newService.description" name="newServiceDescription" />
         </label>
       </div>
+      <p class="form-hint"><span class="required-marker">*</span> Campo obligatorio.</p>
+      @if (serviceFormError()) {
+        <p class="error">{{ serviceFormError() }}</p>
+      }
       <button type="button" [disabled]="creatingService()" (click)="createService()">
         @if (creatingService()) {
           <span class="spinner"></span> Creando…

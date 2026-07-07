@@ -28,6 +28,7 @@ export class BranchesComponent implements OnInit {
 
   protected newBranchName = '';
   protected newBranchAddress = '';
+  protected readonly formError = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -41,9 +42,11 @@ export class BranchesComponent implements OnInit {
 
   async createBranch(): Promise<void> {
     if (!this.newBranchName.trim()) {
+      this.formError.set('Escribe un nombre para la sucursal.');
       return;
     }
 
+    this.formError.set(null);
     await this.settingsService.createBranch(
       this.newBranchName.trim(),
       this.newBranchAddress.trim() || undefined,

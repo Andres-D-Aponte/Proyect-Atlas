@@ -33,10 +33,12 @@ export class ServicesComponent implements OnInit {
   protected readonly loading = signal(true);
 
   protected newCategoryName = '';
+  protected readonly categoryFormError = signal<string | null>(null);
   protected readonly editingCategoryId = signal<number | null>(null);
   protected editingCategoryName = '';
 
   protected readonly creatingService = signal(false);
+  protected readonly serviceFormError = signal<string | null>(null);
   protected newService = emptyServiceDraft();
 
   protected readonly editingServiceId = signal<number | null>(null);
@@ -80,9 +82,11 @@ export class ServicesComponent implements OnInit {
 
   async createCategory(): Promise<void> {
     if (!this.newCategoryName.trim()) {
+      this.categoryFormError.set('Escribe un nombre para la categoría.');
       return;
     }
 
+    this.categoryFormError.set(null);
     try {
       await this.catalogService.createCategory(this.newCategoryName.trim());
       this.newCategoryName = '';
@@ -123,10 +127,20 @@ export class ServicesComponent implements OnInit {
   // ---------- Servicios ----------
 
   async createService(): Promise<void> {
-    if (!this.newService.name.trim() || this.newService.durationMinutes <= 0) {
+    const missing: string[] = [];
+    if (!this.newService.name.trim()) {
+      missing.push('el nombre');
+    }
+    if (!this.newService.durationMinutes || this.newService.durationMinutes <= 0) {
+      missing.push('una duración mayor a 0');
+    }
+
+    if (missing.length > 0) {
+      this.serviceFormError.set(`Falta completar ${missing.join(' y ')} para crear el servicio.`);
       return;
     }
 
+    this.serviceFormError.set(null);
     this.creatingService.set(true);
     try {
       await this.catalogService.createService(this.newService);

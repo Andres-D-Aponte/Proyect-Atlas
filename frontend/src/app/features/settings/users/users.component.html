@@ -16,10 +16,10 @@
   </nav>
 
   <section class="create-form">
-    <input type="email" placeholder="Correo" [(ngModel)]="newEmail" name="newEmail" />
+    <input type="email" placeholder="Correo *" [(ngModel)]="newEmail" name="newEmail" />
     <input
       type="password"
-      placeholder="Contraseña inicial"
+      placeholder="Contraseña inicial * (mín. 8 caracteres)"
       [(ngModel)]="newPassword"
       name="newPassword"
     />
@@ -36,6 +36,9 @@
       }
     </button>
   </section>
+  @if (formError()) {
+    <p class="error">{{ formError() }}</p>
+  }
 
   @if (loading()) {
     <p><span class="spinner"></span> Cargando…</p>

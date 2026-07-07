@@ -25,6 +25,7 @@ export class UsersComponent implements OnInit {
   protected readonly users = signal<CompanyUser[]>([]);
   protected readonly loading = signal(true);
   protected readonly creating = signal(false);
+  protected readonly formError = signal<string | null>(null);
 
   protected newEmail = '';
   protected newPassword = '';
@@ -41,10 +42,22 @@ export class UsersComponent implements OnInit {
   }
 
   async createUser(): Promise<void> {
-    if (!this.newEmail.trim() || !this.newPassword.trim()) {
+    const missing: string[] = [];
+    if (!this.newEmail.trim()) {
+      missing.push('el correo');
+    }
+    if (!this.newPassword.trim()) {
+      missing.push('la contraseña');
+    } else if (this.newPassword.trim().length < 8) {
+      missing.push('una contraseña de al menos 8 caracteres');
+    }
+
+    if (missing.length > 0) {
+      this.formError.set(`Falta completar ${missing.join(' y ')} para crear el usuario.`);
       return;
     }
 
+    this.formError.set(null);
     this.creating.set(true);
     try {
       await this.usersService.create({

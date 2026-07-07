@@ -27,6 +27,7 @@ export class ClientsComponent implements OnInit {
   protected readonly clients = signal<Client[]>([]);
   protected readonly loading = signal(true);
   protected readonly creating = signal(false);
+  protected readonly formError = signal<string | null>(null);
   protected searchTerm = '';
 
   protected newClient = emptyClientDraft();
@@ -53,10 +54,20 @@ export class ClientsComponent implements OnInit {
   }
 
   async createClient(): Promise<void> {
-    if (!this.newClient.name.trim() || !this.newClient.phone.trim()) {
+    const missing: string[] = [];
+    if (!this.newClient.name.trim()) {
+      missing.push('el nombre');
+    }
+    if (!this.newClient.phone.trim()) {
+      missing.push('el teléfono');
+    }
+
+    if (missing.length > 0) {
+      this.formError.set(`Falta completar ${missing.join(' y ')} para crear el cliente.`);
       return;
     }
 
+    this.formError.set(null);
     this.creating.set(true);
     try {
       await this.clientsService.create(this.newClient);

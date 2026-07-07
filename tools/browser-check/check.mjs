@@ -67,7 +67,7 @@ try {
   await shot('03-companies');
 
   step('4) Crear una empresa de prueba');
-  await page.fill('input[placeholder="Nombre de la nueva empresa"]', COMPANY_NAME);
+  await page.fill('input[placeholder="Nombre de la nueva empresa *"]', COMPANY_NAME);
   await page.click('button:has-text("Crear empresa")');
   await page.waitForSelector(`text=${COMPANY_NAME}`);
   await shot('04-companies-created');
@@ -89,7 +89,7 @@ try {
   step('7) Crear una sucursal y su horario');
   await page.click('a:has-text("Sucursales")');
   await page.waitForURL('**/settings/branches');
-  await page.fill('input[placeholder="Nombre de la sucursal"]', 'Sucursal Browser Check');
+  await page.fill('input[placeholder="Nombre de la sucursal *"]', 'Sucursal Browser Check');
   await page.click('button:has-text("Crear sucursal")');
   await page.waitForSelector('text=Sucursal Browser Check');
   await page.click('button:has-text("Editar horario")');
@@ -110,10 +110,10 @@ try {
   step('9) Crear el Business Admin real de la empresa (desde el panel de Empresas)');
   const adminRow = page.locator('tr', { hasText: COMPANY_NAME });
   await adminRow.locator('button:has-text("+ Admin")').click();
-  await page.fill('input[placeholder="Correo del Business Admin"]', ADMIN_EMAIL);
-  await page.fill('input[placeholder="Contraseña inicial"]', ADMIN_PASSWORD);
+  await page.fill('input[placeholder="Correo del Business Admin *"]', ADMIN_EMAIL);
+  await page.fill('input[placeholder="Contraseña inicial * (mín. 8 caracteres)"]', ADMIN_PASSWORD);
   await page.locator('tr.admin-form-row').locator('button:has-text("Crear")').click();
-  await page.waitForSelector('input[placeholder="Correo del Business Admin"]', { state: 'detached' });
+  await page.waitForSelector('input[placeholder="Correo del Business Admin *"]', { state: 'detached' });
   await shot('09-admin-created');
 
   step('10) Cerrar sesión y entrar con el Business Admin real (no impersonación)');
@@ -129,8 +129,8 @@ try {
   step('11) Crear un usuario Recepcionista/Cajero desde la pestaña Usuarios');
   await page.click('a:has-text("Usuarios")');
   await page.waitForURL('**/settings/users');
-  await page.fill('input[placeholder="Correo"]', STAFF_EMAIL);
-  await page.fill('input[placeholder="Contraseña inicial"]', ADMIN_PASSWORD);
+  await page.fill('input[placeholder="Correo *"]', STAFF_EMAIL);
+  await page.fill('input[placeholder="Contraseña inicial * (mín. 8 caracteres)"]', ADMIN_PASSWORD);
   await page.selectOption('select', 'RECEPTIONIST_CASHIER');
   await page.click('button:has-text("Crear usuario")');
   await page.waitForSelector(`text=${STAFF_EMAIL}`);
@@ -205,37 +205,42 @@ try {
     if (index !== -1) consoleErrors.splice(index, 1);
   }
 
-  step('20) Crear un cliente desde la pestaña Clientes');
+  step('20) Ir a Clientes e intentar crear uno sin datos (debe guiar, no fallar en silencio)');
   await page.click('a:has-text("Clientes")');
   await page.waitForURL('**/clients');
+  await page.click('button:has-text("+ Crear cliente")');
+  await page.waitForSelector('.client-form .error:has-text("Falta completar el nombre y el teléfono")');
+  await shot('20-client-empty-form-guidance');
+
+  step('21) Crear el cliente ya con los datos requeridos');
   await page.fill('input[name=newClientName]', 'Cliente Browser Check');
   await page.fill('input[name=newClientPhone]', '3001112222');
   await page.click('button:has-text("+ Crear cliente")');
   await page.waitForSelector('text=Cliente Browser Check');
-  await shot('20-client-created');
+  await shot('21-client-created');
 
-  step('21) Buscar el cliente y ver su historial (evento de alta)');
+  step('22) Buscar el cliente y ver su historial (evento de alta)');
   await page.fill('input[name=searchTerm]', 'Browser Check');
   await page.click('button:has-text("Buscar")');
   await page.waitForSelector('text=Cliente Browser Check');
   const clientRow = page.locator('tr', { hasText: 'Cliente Browser Check' });
   await clientRow.locator('button:has-text("Ver historial")').click();
   await page.waitForSelector('text=Cliente registrado.');
-  await shot('21-client-timeline-created');
+  await shot('22-client-timeline-created');
 
-  step('22) Editar el cliente y confirmar el nuevo evento en el historial');
+  step('23) Editar el cliente y confirmar el nuevo evento en el historial');
   await clientRow.locator('button:has-text("Editar")').click();
   await page.fill('input[name=editClientPhone]', '3009998888');
   await page.locator('tr.client-edit-row').locator('button:has-text("Guardar")').click();
   await page.waitForSelector('text=3009998888');
   await clientRow.locator('button:has-text("Ver historial")').click();
   await page.waitForSelector('text=Datos actualizados: teléfono.');
-  await shot('22-client-timeline-updated');
+  await shot('23-client-timeline-updated');
 
-  step('23) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
+  step('24) Cerrar sesión desde una pantalla de Business Admin (botón "Salir" visible en toda la app)');
   await page.click('button:has-text("Salir")');
   await page.waitForURL('**/login');
-  await shot('23-logout-from-business-admin-screen');
+  await shot('24-logout-from-business-admin-screen');
 
   console.log('\n=== RESULTADO: OK ===');
   console.log('Errores de consola:', consoleErrors.length ? consoleErrors : 'ninguno');

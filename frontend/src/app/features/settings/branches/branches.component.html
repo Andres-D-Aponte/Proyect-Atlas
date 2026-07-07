@@ -15,10 +15,13 @@
   </nav>
 
   <section class="create-form">
-    <input type="text" placeholder="Nombre de la sucursal" [(ngModel)]="newBranchName" name="newBranchName" />
+    <input type="text" placeholder="Nombre de la sucursal *" [(ngModel)]="newBranchName" name="newBranchName" />
     <input type="text" placeholder="Dirección (opcional)" [(ngModel)]="newBranchAddress" name="newBranchAddress" />
     <button type="button" (click)="createBranch()">+ Crear sucursal</button>
   </section>
+  @if (formError()) {
+    <p class="error">{{ formError() }}</p>
+  }
 
   @if (loading()) {
     <p><span class="spinner"></span> Cargando…</p>

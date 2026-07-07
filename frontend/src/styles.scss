@@ -367,6 +367,21 @@ select {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-soft);
   }
+
+  /* Angular marca así los campos de un formulario reactivo con Validators
+     que fallan y ya fueron tocados — señaliza el campo exacto, no solo un
+     mensaje genérico arriba (ver docs/05_Practical_Guide.md). */
+  &.ng-invalid.ng-touched {
+    border-color: var(--error);
+  }
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--error);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 input[type='color'] {
@@ -485,6 +500,18 @@ button,
 
 .error {
   color: var(--error);
+}
+
+/* Marca de campo obligatorio + texto de ayuda de un formulario (ver
+   docs/05_Practical_Guide.md, "Guía de campos obligatorios"). */
+.required-marker {
+  color: var(--error);
+}
+
+.form-hint {
+  margin: 0 0 0.75rem;
+  color: var(--text-subtle);
+  font-size: 0.82rem;
 }
 
 .success {
