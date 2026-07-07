@@ -35,12 +35,19 @@ export class ServicesController {
     return this.servicesService.create(companyId, dto);
   }
 
+  /**
+   * Lectura abierta a Supervisor/Recepcionista-Cajero: la Agenda (accesible a
+   * esos roles) necesita listar servicios para su formulario de citas, aunque
+   * crear/editar servicios siga siendo exclusivo de Business Admin.
+   */
   @Get()
+  @Roles(Role.BUSINESS_ADMIN, Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER)
   findAll(@CurrentCompanyId() companyId: number): Promise<Service[]> {
     return this.servicesService.findAll(companyId);
   }
 
   @Get(':id')
+  @Roles(Role.BUSINESS_ADMIN, Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER)
   findOne(
     @CurrentCompanyId() companyId: number,
     @Param('id', ParseIntPipe) id: number,

@@ -1,0 +1,69 @@
+@if (loadingState()) {
+  <p class="timeline-hint"><span class="spinner"></span> Consultando disponibilidad…</p>
+} @else if (isHolidayState()) {
+  <p class="timeline-hint timeline-hint--warning">
+    ⛔ La sucursal está cerrada este día (festivo/excepción). Elige otra fecha.
+  </p>
+} @else if (!hasSchedule()) {
+  <p class="timeline-hint timeline-hint--warning">
+    😕 Este profesional no tiene horario asignado en esta sucursal ese día.
+  </p>
+} @else {
+  <div class="timeline">
+    <div
+      class="timeline-track"
+      #track
+      tabindex="0"
+      role="slider"
+      aria-label="Selecciona la hora de la cita"
+      [attr.aria-valuenow]="selectedTimeLabel()"
+      (click)="onTrackClick($event, track)"
+      (keydown)="onTrackKeydown($event)"
+    >
+      @for (mark of hourMarks(); track mark.leftPct) {
+        <span class="timeline-gridline" [style.left.%]="mark.leftPct">
+          <span class="timeline-gridline-label">{{ mark.label }}</span>
+        </span>
+      }
+
+      @for (segment of openSegments(); track segment.leftPct) {
+        <div
+          class="timeline-open"
+          [style.left.%]="segment.leftPct"
+          [style.width.%]="segment.widthPct"
+        ></div>
+      }
+
+      @for (segment of busySegments(); track segment.leftPct) {
+        <div
+          class="timeline-busy"
+          [style.left.%]="segment.leftPct"
+          [style.width.%]="segment.widthPct"
+          [title]="segment.label + ' · ' + segment.timeRangeLabel"
+        >
+          <span class="timeline-busy-label">{{ segment.label }}</span>
+        </div>
+      }
+
+      @if (selectionSegment(); as selection) {
+        <div
+          class="timeline-selection"
+          [style.left.%]="selection.leftPct"
+          [style.width.%]="selection.widthPct"
+        ></div>
+      }
+    </div>
+
+    <div class="timeline-legend">
+      <span><i class="swatch swatch-open"></i> Disponible</span>
+      <span><i class="swatch swatch-busy"></i> Ocupado</span>
+      <span><i class="swatch swatch-selection"></i> Tu selección</span>
+    </div>
+
+    @if (selectedTimeLabel(); as time) {
+      <p class="timeline-selected-time">Hora elegida: <strong>{{ time }}</strong></p>
+    } @else {
+      <p class="timeline-hint">Haz clic sobre la franja verde para elegir la hora.</p>
+    }
+  </div>
+}

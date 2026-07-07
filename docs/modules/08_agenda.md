@@ -21,6 +21,7 @@ El módulo central del sistema: profesionales con su horario semanal por sucursa
   - Portal de autoservicio para que el cliente reserve su propia cita (no está en ninguna etapa construida; hoy solo el staff crea citas).
   - Sugerencia inteligente de horario alternativo cuando un profesional deja de estar disponible de repente — se documenta como refinamiento futuro, no es un AC del backlog actual.
   - Notificación real al cliente de la lista de espera cuando se le ofrece un cupo liberado (Etapa 11); por ahora la oferta queda visible en la pantalla de Agenda para que el staff lo contacte manualmente.
+- **Corrección posterior (mismo día)**: al probar la etapa como Recepcionista/Cajero real se encontraron y corrigieron 4 bugs — ver "Bugs encontrados y corregidos" más abajo — y se agregó disponibilidad visual (mapa de profesionales + línea de tiempo clicable) para que agendar no dependa de adivinar un horario y esperar el rechazo del backend.
 
 ## Modelo de datos
 
@@ -49,9 +50,12 @@ El módulo central del sistema: profesionales con su horario semanal por sucursa
 | PATCH | `/scheduling/waitlist/:id/cancel` | Business Admin, Supervisor, Recepcionista/Cajero | Cancela una entrada (rechaza si ya fue convertida). |
 | POST/GET | `/scheduling/appointments` | Business Admin, Supervisor, Recepcionista/Cajero | Crea/lista citas (filtros por sucursal, profesional, cliente, estado). |
 | GET/PATCH | `/scheduling/appointments/:id` | Business Admin, Supervisor, Recepcionista/Cajero | Detalle (con historial) y edición (estado, profesional, servicio, horario, notas). |
+| GET | `/scheduling/appointments/availability` | Business Admin, Supervisor, Recepcionista/Cajero | Horario del día + rangos ocupados (bloqueos y citas) de un profesional en una sucursal/fecha, para dibujar la línea de tiempo visual. |
 | PATCH | `/platform/companies/:id/agenda-policy` | Platform Owner | Único punto para cambiar `allowProfessionalChangeOnAppointment`. |
 
 Aislamiento entre empresas igual que en el resto de módulos: `findFirst({ where: { id, companyId } })`, nunca por `id` solo.
+
+**Lectura vs. escritura en `/settings/branches`, `/scheduling/professionals` y `/catalog/services`**: el `GET` (listar/detalle) de estos tres recursos está disponible también para Supervisor y Recepcionista/Cajero — no solo Business Admin — porque la pantalla de Agenda (que sí es de esos roles) necesita leerlos para armar sus listas desplegables. Crear/editar/eliminar sigue siendo exclusivo de Business Admin. El permiso se define por método HTTP (`@Roles` a nivel de cada handler), no a nivel de controlador completo.
 
 ## Decisiones técnicas y por qué
 
@@ -63,12 +67,30 @@ Aislamiento entre empresas igual que en el resto de módulos: `findFirst({ where
 - **Oferta a la lista de espera se dispara después de la transacción, no dentro de ella**: cancelar una cita y marcar la siguiente entrada de espera como `OFFERED` son dos operaciones independientes; si la segunda fallara no tendría sentido revertir la cancelación ya confirmada al staff.
 - **`noShowAlertThreshold` sin un canal de notificación dedicado**: por ahora la "alerta" (AC del backlog) es visual — la pantalla de Clientes muestra el contador de inasistencias de cada cliente y una insignia de advertencia cuando alcanza el umbral configurado por la empresa; no hay email/push, eso encajaría mejor cuando exista un sistema de notificaciones real.
 
+## Bugs encontrados y corregidos
+
+Encontrados probando la etapa como Recepcionista/Cajero real y en el flujo visual nuevo, no durante la construcción original:
+
+- **Cajero recibía 403 al abrir Agenda**: la pantalla necesita leer sucursales, profesionales y servicios para sus listas desplegables, pero esos tres controladores tenían `@Roles(BUSINESS_ADMIN)` a nivel de clase, bloqueando también la lectura. Se movió `@Roles` a nivel de cada handler: los `GET` ahora aceptan también Supervisor y Recepcionista/Cajero; los `POST/PATCH/DELETE` siguen exclusivos de Business Admin.
+- **Cita guardada en la hora equivocada según la zona horaria del navegador**: al elegir una hora en la línea de tiempo (que se dibuja en hora "de reloj" UTC, igual que `ProfessionalSchedule`), el frontend armaba `startAt` como `"${fecha}T${hora}"` y dejaba que `new Date(...)` lo interpretara — JavaScript interpreta ese formato como hora **local** del navegador, no UTC. Con un profesional de horario 08:00–18:00 y un usuario en un huso distinto de UTC+0, la cita terminaba guardándose varias horas desplazada respecto a la hora elegida. Se corrigió armando el ISO explícitamente en UTC (`"...T12:00:00.000Z"`). No se detectó antes porque todas las pruebas anteriores usaban profesionales con horario abierto 00:00–23:59 (cualquier desplazamiento caía igual dentro del rango).
+- **El historial de una cita aparecía vacío justo después de cambiar su estado**: `toggleHistory()` fusionaba el detalle recién pedido dentro de la lista compartida `appointments()`; si el `reload()` disparado por el cambio de estado todavía estaba en vuelo, terminaba resolviéndose después y pisaba esa fusión, dejando el historial vacío en pantalla aunque sí existiera en la base de datos. Se separó en una señal propia (`expandedHistoryEvents`) que no depende del array compartido.
+- **Layout roto del formulario "Nueva cita"**: la clase global `.create-form` fija `align-items: flex-end`; al no sobreescribirlo, cada fila del formulario (y el mapa/línea de tiempo) se encogía a su contenido y quedaba pegada a la derecha con un vacío enorme a la izquierda. Se agregó `align-items: stretch` en `.agenda-form`.
+
+## Disponibilidad visual (mapa de profesionales + línea de tiempo)
+
+Agendar una cita ya no depende de escribir una fecha/hora a ciegas y esperar a que el backend la rechace:
+
+- Al elegir la sucursal, aparece una **matriz semanal** (profesional × día) con el horario de cada uno en esa sucursal, tomada de los mismos datos que ya trae `GET /scheduling/professionals` (se le agregó `include: { schedules, blocks }` también en el listado — antes solo el detalle por id los traía, así que la pantalla de Profesionales tampoco los mostraba correctamente tras crear/guardar). Hacer clic en una fila selecciona ese profesional.
+- Al tener sucursal + profesional + fecha, se pinta una **línea de tiempo** (`AvailabilityTimelineComponent`) alimentada por `GET /scheduling/appointments/availability`: franja verde para el horario disponible, bloques rojos para bloqueos/citas existentes (con su nombre/motivo), y una selección punteada donde el usuario hace clic. La hora elegida se snapea a 5 minutos; también se puede mover con las flechas del teclado (accesibilidad).
+- El backend sigue siendo la única fuente de verdad — la línea de tiempo es una ayuda visual, no reemplaza la validación real de `assertAvailability()`. Si el usuario hace clic sobre una franja ocupada, el intento de agendar igual se envía y el backend lo rechaza con el mismo toast de siempre.
+
 ## Permisos
 
 | Endpoint | Business Admin | Supervisor | Recepcionista/Cajero | Platform Owner (sin impersonar) | Profesional |
 |---|---|---|---|---|---|
-| `/scheduling/professionals`, `/scheduling/resources`, `/scheduling/schedule-exceptions` | ✅ | 403 | 403 | 403 | 403 |
-| `/scheduling/appointments`, `/scheduling/waitlist` | ✅ | ✅ | ✅ | 403 | 403 |
+| `/scheduling/professionals`, `/scheduling/resources`, `/scheduling/schedule-exceptions` (escritura) | ✅ | 403 | 403 | 403 | 403 |
+| `/scheduling/professionals` (lectura), `/settings/branches` (lectura), `/catalog/services` (lectura) | ✅ | ✅ | ✅ | 403 | 403 |
+| `/scheduling/appointments` (incluida `/availability`), `/scheduling/waitlist` | ✅ | ✅ | ✅ | 403 | 403 |
 | `/platform/companies/:id/agenda-policy` | 403 | 403 | 403 | ✅ | 403 |
 
 ## Frontend
@@ -76,7 +98,7 @@ Aislamiento entre empresas igual que en el resto de módulos: `findFirst({ where
 - `core/models/scheduling.model.ts` / `core/services/scheduling.service.ts`: tipos y llamadas HTTP para los cinco submódulos (profesionales, recursos, excepciones, citas, lista de espera) en un solo servicio, siguiendo el mismo criterio de `settings.service.ts` (varias entidades relacionadas, un solo archivo).
 - `features/settings/professionals/`: pantalla nueva (Business Admin) — alta de profesional con vínculo opcional a un usuario con rol Profesional, editor de horario semanal por sucursal/día y gestión de bloqueos.
 - `features/settings/branches/`: gana una sección "Recursos" por sucursal (alta, activar/desactivar), sin pantalla nueva porque el recurso pertenece conceptualmente a la sucursal.
-- `features/agenda/`: pantalla nueva (Business Admin, Supervisor, Recepcionista/Cajero) — alta de cita con validación guiada, tabla con filtros por sucursal/estado, cambio de estado inline, historial expandible por fila, y sección de lista de espera (alta, cancelar).
+- `features/agenda/`: pantalla nueva (Business Admin, Supervisor, Recepcionista/Cajero) — alta de cita con validación guiada, matriz semanal de profesionales por sucursal, línea de tiempo visual de disponibilidad (`availability-timeline/`, componente reutilizable con navegación por teclado), tabla con filtros por sucursal/estado, cambio de estado inline, historial expandible por fila (con su propia señal, ver "Bugs encontrados"), y sección de lista de espera (alta, cancelar).
 - `features/clients/`: gana una columna "Inasistencias" con insignia de alerta (⚠) cuando el cliente alcanza el umbral configurado — visible solo para Business Admin, ya que `/settings/company` (de donde sale el umbral) es un endpoint restringido a ese rol.
 - `features/platform/companies/`: gana un interruptor "Cambio de profesional en citas" por empresa, para que el Platform Owner controle `allowProfessionalChangeOnAppointment` sin salir de su panel.
 - Las pantallas de Configuración, Clientes y Agenda ganan enlaces cruzados en su barra de pestañas ("Profesionales", "Agenda"), mismo criterio que la Etapa 7 con "Clientes".
@@ -84,5 +106,5 @@ Aislamiento entre empresas igual que en el resto de módulos: `findFirst({ where
 ## Pruebas
 
 - **Unitarias**: `professionals.service.spec.ts`, `resources.service.spec.ts`, `schedule-exceptions.service.spec.ts`, `waitlist.service.spec.ts`, `appointments.service.spec.ts` — validan aislamiento por `companyId`, vínculo profesional↔usuario (rol correcto, no duplicado), reemplazo de horario, bloqueos, y en `AppointmentsService`: cada paso del chequeo de disponibilidad (festivo, horario, bloqueo, solapamiento), asignación de recurso automática/explícita, requerimiento de segundo profesional, bloqueo de cambio de servicio en cita finalizada, bloqueo de cambio de profesional según política, incremento de inasistencias, y disparo de oferta a lista de espera al cancelar.
-- **E2E** (`test/scheduling.e2e-spec.ts`, contra PostgreSQL real): flujo completo de creación de cita con validación de disponibilidad (overbooking, fuera de horario, festivo, bloqueo), servicio de dos profesionales, asignación automática de recurso y rechazo cuando no hay ninguno libre, cambio de estado con historial, bloqueo de cambio de servicio al finalizar, incremento de inasistencias, oferta a lista de espera al cancelar, política de cambio de profesional controlada por el Platform Owner, y aislamiento entre empresas.
-- **Manual (navegador, Playwright)**: crear profesional con horario y bloqueo, crear recurso, crear cita, cambiar su estado, intentar una doble reserva (debe rechazarse con el toast global), ver el historial de la cita.
+- **E2E** (`test/scheduling.e2e-spec.ts`, contra PostgreSQL real): flujo completo de creación de cita con validación de disponibilidad (overbooking, fuera de horario, festivo, bloqueo), servicio de dos profesionales, asignación automática de recurso y rechazo cuando no hay ninguno libre, cambio de estado con historial, bloqueo de cambio de servicio al finalizar, incremento de inasistencias, oferta a lista de espera al cancelar, política de cambio de profesional controlada por el Platform Owner, aislamiento entre empresas, el endpoint de disponibilidad (horario + bloqueos + citas del día, ordenados; rechazo si el profesional/sucursal es de otra empresa), y un Recepcionista/Cajero real listando sucursales/profesionales/servicios sin poder crearlos.
+- **Manual (navegador, Playwright, `tools/browser-check/check.mjs`)**: crear profesional con horario y bloqueo, crear recurso, crear cita usando la matriz de profesionales y la línea de tiempo (clic para elegir hora), intentar una doble reserva (debe rechazarse con el toast global), ver el historial de la cita, y — como Recepcionista/Cajero real (no impersonado) — entrar a Agenda y confirmar que no aparece el 403 corregido en esta ronda.

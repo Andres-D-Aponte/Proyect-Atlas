@@ -7,6 +7,7 @@ import {
   AppointmentDraft,
   AppointmentStatus,
   Professional,
+  ProfessionalAvailability,
   ProfessionalBlock,
   ProfessionalBlockType,
   ProfessionalDraft,
@@ -139,6 +140,19 @@ export class SchedulingService {
       ? `${API_BASE_URL}/scheduling/appointments?${query}`
       : `${API_BASE_URL}/scheduling/appointments`;
     return firstValueFrom(this.http.get<Appointment[]>(url));
+  }
+
+  getAvailability(
+    branchId: number,
+    professionalId: number,
+    date: string,
+  ): Promise<ProfessionalAvailability> {
+    return firstValueFrom(
+      this.http.get<ProfessionalAvailability>(
+        `${API_BASE_URL}/scheduling/appointments/availability`,
+        { params: { branchId, professionalId, date } },
+      ),
+    );
   }
 
   getAppointment(id: number): Promise<Appointment> {

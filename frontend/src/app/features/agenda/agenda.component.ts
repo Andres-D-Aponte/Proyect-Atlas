@@ -17,17 +17,35 @@ import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_OPTIONS,
   Professional,
+  ProfessionalAvailability,
+  ProfessionalSchedule,
   Waitlist,
   WAITLIST_STATUS_LABELS,
   emptyAppointmentDraft,
 } from '../../core/models/scheduling.model';
 import { scrollToId } from '../../core/utils/scroll';
 import { AppShellComponent } from '../../shared/components/app-shell/app-shell.component';
+import { AvailabilityTimelineComponent } from './availability-timeline/availability-timeline.component';
+
+const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+function todayLocalDate(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
 
 @Component({
   selector: 'app-agenda',
   standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink, RouterLinkActive, AppShellComponent],
+  imports: [
+    FormsModule,
+    DatePipe,
+    RouterLink,
+    RouterLinkActive,
+    AppShellComponent,
+    AvailabilityTimelineComponent,
+  ],
   templateUrl: './agenda.component.html',
   styleUrl: './agenda.component.scss',
 })
@@ -42,6 +60,7 @@ export class AgendaComponent implements OnInit {
   protected readonly statusLabels = APPOINTMENT_STATUS_LABELS;
   protected readonly statusOptions = APPOINTMENT_STATUS_OPTIONS;
   protected readonly waitlistStatusLabels = WAITLIST_STATUS_LABELS;
+  protected readonly dayNamesShort = DAY_NAMES_SHORT;
 
   protected readonly appointments = signal<Appointment[]>([]);
   protected readonly branches = signal<Branch[]>([]);
@@ -55,7 +74,12 @@ export class AgendaComponent implements OnInit {
   protected filterStatus: AppointmentStatus | '' = '';
 
   protected draft: AppointmentDraft = emptyAppointmentDraft();
+  protected selectedDate = todayLocalDate();
+  protected selectedTime: string | null = null;
   protected readonly formError = signal<string | null>(null);
+
+  protected readonly availability = signal<ProfessionalAvailability | null>(null);
+  protected readonly availabilityLoading = signal(false);
 
   protected readonly expandedAppointmentId = signal<number | null>(null);
 
@@ -69,6 +93,16 @@ export class AgendaComponent implements OnInit {
   protected readonly selectedService = computed(
     () => this.services().find((s) => s.id === this.draft.serviceId) ?? null,
   );
+
+  protected readonly professionalsAtBranch = computed(() => {
+    const branchId = this.draft.branchId;
+    if (!branchId) {
+      return [];
+    }
+    return this.professionals().filter((professional) =>
+      (professional.schedules ?? []).some((row) => row.branchId === branchId),
+    );
+  });
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -105,6 +139,70 @@ export class AgendaComponent implements OnInit {
     return this.branches().find((b) => b.id === branchId)?.name ?? `Sucursal ${branchId}`;
   }
 
+  /** Horario de un profesional en la sucursal elegida, para pintar el mapa semanal. */
+  scheduleFor(professional: Professional, dayOfWeek: number): ProfessionalSchedule | undefined {
+    return (professional.schedules ?? []).find(
+      (row) => row.branchId === this.draft.branchId && row.dayOfWeek === dayOfWeek,
+    );
+  }
+
+  async onBranchChange(): Promise<void> {
+    this.draft.professionalId = null;
+    this.draft.secondProfessionalId = null;
+    this.selectedTime = null;
+    this.syncStartAt();
+    await this.refreshAvailability();
+  }
+
+  selectProfessionalFromMap(professional: Professional): void {
+    this.draft.professionalId = professional.id;
+    void this.onProfessionalOrDateChange();
+  }
+
+  async onProfessionalOrDateChange(): Promise<void> {
+    this.selectedTime = null;
+    this.syncStartAt();
+    await this.refreshAvailability();
+  }
+
+  onTimeSelected(time: string): void {
+    this.selectedTime = time;
+    this.syncStartAt();
+  }
+
+  private async refreshAvailability(): Promise<void> {
+    const { branchId, professionalId } = this.draft;
+    if (!branchId || !professionalId || !this.selectedDate) {
+      this.availability.set(null);
+      return;
+    }
+
+    this.availabilityLoading.set(true);
+    try {
+      this.availability.set(
+        await this.schedulingService.getAvailability(branchId, professionalId, this.selectedDate),
+      );
+    } catch {
+      this.availability.set(null);
+    } finally {
+      this.availabilityLoading.set(false);
+    }
+  }
+
+  /**
+   * El horario del profesional (schedules/bloqueos) se guarda y se muestra en
+   * la línea de disponibilidad como hora "de reloj" UTC, sin zona horaria
+   * (ver docs/modules/08_agenda.md). Por eso `startAt` se arma como ISO UTC
+   * explícito en vez de dejar que `Date` lo interprete en la zona horaria
+   * local del navegador — si no, la hora elegida en el mapa (ej. "12:00")
+   * podría guardarse como otra hora distinta según dónde esté el usuario.
+   */
+  private syncStartAt(): void {
+    this.draft.startAt = this.selectedTime
+      ? `${this.selectedDate}T${this.selectedTime}:00.000Z`
+      : '';
+  }
+
   async createAppointment(): Promise<void> {
     const missing: string[] = [];
     if (!this.draft.branchId) missing.push('la sucursal');
@@ -113,7 +211,7 @@ export class AgendaComponent implements OnInit {
     if (this.selectedService()?.requiresTwoProfessionals && !this.draft.secondProfessionalId) {
       missing.push('el segundo profesional (este servicio lo requiere)');
     }
-    if (!this.draft.startAt) missing.push('la fecha y hora');
+    if (!this.draft.startAt) missing.push('la hora (elígela en la línea de disponibilidad)');
 
     if (missing.length > 0) {
       this.formError.set(`Falta completar ${missing.join(', ')} para agendar la cita.`);
@@ -123,11 +221,10 @@ export class AgendaComponent implements OnInit {
 
     this.formError.set(null);
     try {
-      const created = await this.schedulingService.createAppointment({
-        ...this.draft,
-        startAt: new Date(this.draft.startAt).toISOString(),
-      });
+      const created = await this.schedulingService.createAppointment(this.draft);
       this.draft = emptyAppointmentDraft();
+      this.selectedTime = null;
+      this.availability.set(null);
       await this.reload();
       scrollToId(`appointment-row-${created.id}`);
     } catch {
@@ -144,17 +241,25 @@ export class AgendaComponent implements OnInit {
     }
   }
 
+  /**
+   * Se guarda aparte de `appointments()` (no se fusiona ahí) a propósito: si
+   * un cambio de estado dispara su propio `reload()` justo antes de que el
+   * usuario abra el historial, ese `reload()` podría resolverse después y
+   * pisar el detalle recién obtenido, dejando el historial vacío en pantalla
+   * aunque sí exista en la base de datos.
+   */
+  protected readonly expandedHistoryEvents = signal<Appointment['historyEvents']>(undefined);
+
   async toggleHistory(appointment: Appointment): Promise<void> {
     if (this.expandedAppointmentId() === appointment.id) {
       this.expandedAppointmentId.set(null);
+      this.expandedHistoryEvents.set(undefined);
       return;
     }
 
-    const detail = await this.schedulingService.getAppointment(appointment.id);
-    this.appointments.set(
-      this.appointments().map((a) => (a.id === appointment.id ? detail : a)),
-    );
     this.expandedAppointmentId.set(appointment.id);
+    const detail = await this.schedulingService.getAppointment(appointment.id);
+    this.expandedHistoryEvents.set(detail.historyEvents);
     scrollToId(`appointment-history-${appointment.id}`);
   }
 

@@ -29,6 +29,7 @@ describe('Scheduling / Agenda (e2e)', () => {
   let prisma: PrismaService;
 
   const platformOwnerEmail = 'e2e-agenda-owner@atlas.dev';
+  const receptionistEmail = 'e2e-agenda-receptionist@atlas.dev';
   const password = 'ChangeMe123!';
 
   let ownerToken: string;
@@ -36,6 +37,7 @@ describe('Scheduling / Agenda (e2e)', () => {
   let companyBId: number;
   let companyAToken: string;
   let companyBToken: string;
+  let receptionistToken: string;
 
   let branchId: number;
   let serviceId: number;
@@ -197,13 +199,27 @@ describe('Scheduling / Agenda (e2e)', () => {
       .send({ name: 'Cliente Agenda', phone: '3000000000' })
       .expect(201);
     clientId = client.body.id;
+
+    await request(app.getHttpServer())
+      .post('/settings/users')
+      .set('Authorization', `Bearer ${companyAToken}`)
+      .send({
+        email: receptionistEmail,
+        password,
+        role: Role.RECEPTIONIST_CASHIER,
+      })
+      .expect(201);
+    receptionistToken = (await login(app, receptionistEmail, password))
+      .accessToken;
   });
 
   afterAll(async () => {
     await prisma.company.deleteMany({
       where: { id: { in: [companyAId, companyBId] } },
     });
-    await prisma.user.deleteMany({ where: { email: platformOwnerEmail } });
+    await prisma.user.deleteMany({
+      where: { email: { in: [platformOwnerEmail, receptionistEmail] } },
+    });
     await app.close();
   });
 
@@ -376,6 +392,84 @@ describe('Scheduling / Agenda (e2e)', () => {
       .expect(400);
   });
 
+  it('devuelve la disponibilidad del día (horario, cita y bloqueo) para dibujar la línea de tiempo', async () => {
+    const availabilityProfessional = await request(app.getHttpServer())
+      .post('/scheduling/professionals')
+      .set('Authorization', `Bearer ${companyAToken}`)
+      .send({ name: 'Carla Disponibilidad' })
+      .expect(201);
+    const availabilityProfessionalId: number = availabilityProfessional.body.id;
+
+    await request(app.getHttpServer())
+      .post(`/scheduling/professionals/${availabilityProfessionalId}/schedule`)
+      .set('Authorization', `Bearer ${companyAToken}`)
+      .send({
+        schedule: [
+          { branchId, dayOfWeek: 1, startsAt: '08:00', endsAt: '18:00' },
+        ],
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/scheduling/appointments')
+      .set('Authorization', `Bearer ${companyAToken}`)
+      .send({
+        branchId,
+        clientId,
+        serviceId,
+        professionalId: availabilityProfessionalId,
+        startAt: `${MONDAY}T10:00:00.000Z`,
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/scheduling/professionals/${availabilityProfessionalId}/blocks`)
+      .set('Authorization', `Bearer ${companyAToken}`)
+      .send({
+        type: 'LUNCH',
+        startAt: `${MONDAY}T15:00:00.000Z`,
+        endAt: `${MONDAY}T16:00:00.000Z`,
+      })
+      .expect(201);
+
+    const availability = await request(app.getHttpServer())
+      .get('/scheduling/appointments/availability')
+      .query({
+        branchId,
+        professionalId: availabilityProfessionalId,
+        date: MONDAY,
+      })
+      .set('Authorization', `Bearer ${companyAToken}`)
+      .expect(200);
+
+    expect(availability.body).toMatchObject({
+      date: MONDAY,
+      dayOfWeek: 1,
+      isHoliday: false,
+      schedules: [{ startsAt: '08:00', endsAt: '18:00' }],
+    });
+    expect(availability.body.busy).toEqual([
+      expect.objectContaining({
+        startAt: `${MONDAY}T10:00:00.000Z`,
+        endAt: `${MONDAY}T10:40:00.000Z`,
+        label: 'Corte simple',
+      }),
+      expect.objectContaining({
+        startAt: `${MONDAY}T15:00:00.000Z`,
+        endAt: `${MONDAY}T16:00:00.000Z`,
+        label: 'Almuerzo',
+      }),
+    ]);
+  });
+
+  it('rechaza consultar disponibilidad de un profesional o sucursal de otra empresa', async () => {
+    await request(app.getHttpServer())
+      .get('/scheduling/appointments/availability')
+      .query({ branchId, professionalId, date: MONDAY })
+      .set('Authorization', `Bearer ${companyBToken}`)
+      .expect(404);
+  });
+
   it('cambia el estado de una cita, registra historial y bloquea el cambio de servicio al finalizar', async () => {
     const created = await request(app.getHttpServer())
       .post('/scheduling/appointments')
@@ -521,6 +615,35 @@ describe('Scheduling / Agenda (e2e)', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ allowProfessionalChangeOnAppointment: true })
       .expect(200);
+  });
+
+  it('un Recepcionista/Cajero real puede listar sucursales, profesionales y servicios para agendar, pero no crearlos', async () => {
+    await request(app.getHttpServer())
+      .get('/settings/branches')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/scheduling/professionals')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/catalog/services')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/settings/branches')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .send({ name: 'Sucursal no autorizada' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/scheduling/professionals')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .send({ name: 'Profesional no autorizado' })
+      .expect(403);
   });
 
   it('la Empresa B no puede ver ni editar una cita de la Empresa A (aislamiento)', async () => {

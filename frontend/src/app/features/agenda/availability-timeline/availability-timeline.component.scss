@@ -1,0 +1,141 @@
+:host {
+  display: block;
+}
+
+.timeline-hint {
+  margin: 0.5rem 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.timeline-hint--warning {
+  color: var(--warning);
+}
+
+.timeline {
+  margin: 0.6rem 0 0.3rem;
+}
+
+.timeline-track {
+  position: relative;
+  height: 64px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--bg-subtle),
+    var(--bg-subtle) 6px,
+    var(--border) 6px,
+    var(--border) 7px
+  );
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  overflow: hidden;
+  user-select: none;
+}
+
+.timeline-open {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--success-soft);
+  border-left: 2px solid var(--success);
+  border-right: 2px solid var(--success);
+}
+
+.timeline-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+  z-index: 1;
+}
+
+.timeline-gridline-label {
+  position: absolute;
+  bottom: 2px;
+  left: 3px;
+  font-size: 0.65rem;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.timeline-busy {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  min-width: 3px;
+  background: linear-gradient(180deg, var(--error), var(--error) 100%);
+  opacity: 0.85;
+  border-radius: 5px;
+  z-index: 2;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.timeline-busy-label {
+  color: var(--primary-contrast);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-selection {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: rgba(67, 56, 202, 0.25);
+  border: 2px dashed var(--primary);
+  border-radius: 6px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.timeline-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+}
+
+.swatch-open {
+  background: var(--success-soft);
+  border: 2px solid var(--success);
+}
+
+.swatch-busy {
+  background: var(--error);
+}
+
+.swatch-selection {
+  background: rgba(67, 56, 202, 0.25);
+  border: 2px dashed var(--primary);
+}
+
+.timeline-selected-time {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text);
+}

@@ -1,6 +1,7 @@
 .agenda-form {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 0.9rem;
 }
 
@@ -33,6 +34,84 @@
     gap: 0.3rem;
     font-size: 0.85rem;
     color: var(--text-muted);
+  }
+}
+
+.professional-map {
+  margin: 0.3rem 0;
+  padding: 0.9rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+
+  h3 {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+  }
+}
+
+.map-scroll {
+  overflow-x: auto;
+}
+
+.professional-map-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  th,
+  td {
+    padding: 0.4rem 0.55rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-subtle);
+    font-weight: 600;
+  }
+}
+
+.professional-map-name {
+  text-align: left !important;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.professional-map-row {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+
+  &.selected {
+    background: var(--primary-soft);
+    outline: 2px solid var(--primary);
+  }
+}
+
+.map-hours {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.map-off {
+  color: var(--text-subtle);
+}
+
+.availability-section {
+  margin: 0.3rem 0;
+  padding: 0.9rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+
+  h3 {
+    margin: 0 0 0.3rem;
+    font-size: 0.95rem;
   }
 }
 

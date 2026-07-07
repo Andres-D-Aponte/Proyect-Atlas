@@ -156,6 +156,25 @@ export function emptyAppointmentDraft(): AppointmentDraft {
   };
 }
 
+export interface AvailabilityWindow {
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface AvailabilityBusyRange {
+  startAt: string;
+  endAt: string;
+  label: string;
+}
+
+export interface ProfessionalAvailability {
+  date: string;
+  dayOfWeek: number;
+  isHoliday: boolean;
+  schedules: AvailabilityWindow[];
+  busy: AvailabilityBusyRange[];
+}
+
 export interface Waitlist {
   id: number;
   companyId: number;

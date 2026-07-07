@@ -34,12 +34,19 @@ export class BranchesController {
     return this.branchesService.create(companyId, dto);
   }
 
+  /**
+   * Lectura abierta a Supervisor/Recepcionista-Cajero: la Agenda (accesible a
+   * esos roles) necesita listar sucursales para su formulario de citas, aunque
+   * crear/editar sucursales siga siendo exclusivo de Business Admin.
+   */
   @Get()
+  @Roles(Role.BUSINESS_ADMIN, Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER)
   findAll(@CurrentCompanyId() companyId: number): Promise<Branch[]> {
     return this.branchesService.findAll(companyId);
   }
 
   @Get(':id')
+  @Roles(Role.BUSINESS_ADMIN, Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER)
   findOne(
     @CurrentCompanyId() companyId: number,
     @Param('id', ParseIntPipe) id: number,

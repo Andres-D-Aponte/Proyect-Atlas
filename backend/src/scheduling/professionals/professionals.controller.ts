@@ -43,12 +43,19 @@ export class ProfessionalsController {
     return this.professionalsService.create(companyId, dto);
   }
 
+  /**
+   * Lectura abierta a Supervisor/Recepcionista-Cajero: la Agenda (accesible a
+   * esos roles) necesita listar profesionales para su formulario de citas,
+   * aunque crear/editar profesionales siga siendo exclusivo de Business Admin.
+   */
   @Get()
+  @Roles(Role.BUSINESS_ADMIN, Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER)
   findAll(@CurrentCompanyId() companyId: number): Promise<Professional[]> {
     return this.professionalsService.findAll(companyId);
   }
 
   @Get(':id')
+  @Roles(Role.BUSINESS_ADMIN, Role.SUPERVISOR, Role.RECEPTIONIST_CASHIER)
   findOne(
     @CurrentCompanyId() companyId: number,
     @Param('id', ParseIntPipe) id: number,

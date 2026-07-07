@@ -591,13 +591,14 @@ npm test -- --watch=false
 2. Entra como Business Admin de una empresa (impersonando, o con tu propio login real).
 3. Ve a la pestaña **Sucursales** y agrégale un recurso a alguna sucursal (ej. tipo "Silla", nombre "Silla 1") desde el botón "Recursos" de la tarjeta de la sucursal.
 4. Ve a la pestaña **Profesionales** (nueva), crea un profesional, haz clic en "Horario" y agrégale un horario para el día de hoy (ej. 08:00–18:00 en la sucursal que ya tengas creada).
-5. Ve a la pestaña **Agenda** (nueva), crea una cita para ese profesional en un horario dentro de lo que acabas de definir — elige un servicio existente y, si quieres, un cliente. Debe quedar en estado "Confirmada".
+5. Ve a la pestaña **Agenda** (nueva). Al elegir la sucursal verás un mapa semanal con los profesionales y sus horarios; haz clic en el profesional para elegirlo, luego haz clic sobre la franja verde de la línea de disponibilidad para elegir la hora (o usa las flechas del teclado). Elige un servicio existente y, si quieres, un cliente, y agenda. Debe quedar en estado "Confirmada".
 6. Intenta crear una segunda cita para el mismo profesional en un horario que se cruce con la primera: debe rechazarse con un toast rojo explicando el motivo (doble reserva).
 7. En la tabla de citas, cambia el estado de la primera cita a "En atención" y luego a "Finalizada"; haz clic en "Historial" para ver los cambios registrados con fecha y quién los hizo.
 8. Vuelve a **Profesionales**, haz clic en "Bloqueos" del profesional y agrégale un bloqueo de tipo "Almuerzo" cubriendo alguna franja de hoy; luego intenta agendar una cita en esa franja desde Agenda — debe rechazarse.
 9. (Opcional, alerta de inasistencias) Crea otra cita para el mismo cliente y cámbiale el estado a "No asistió" un par de veces hasta alcanzar el umbral configurado en Configuración → Empresa ("Alertar tras esta cantidad de inasistencias"); en la pestaña Clientes debe aparecer una insignia "⚠ Alerta" junto al contador.
 10. (Opcional, lista de espera) En Agenda, agrega una entrada a la lista de espera para el mismo servicio/sucursal, y luego cancela una cita compatible: la entrada debe pasar a estado "Ofrecido".
 11. (Opcional, política de Platform Owner) Desde el panel de Empresas del Platform Owner, usa el interruptor "Cambio de profesional en citas" para bloquearlo, y confirma que intentar cambiar el profesional de una cita desde Agenda ahora se rechaza.
+12. (Opcional, corrección de permisos) Crea un usuario Recepcionista/Cajero real (pestaña Usuarios), cierra sesión y entra con ese correo: debe poder abrir Agenda y ver el mapa de profesionales sin ningún error 403 (antes de esta corrección, sí lo daba).
 
 **Qué mirar en la base de datos:**
 

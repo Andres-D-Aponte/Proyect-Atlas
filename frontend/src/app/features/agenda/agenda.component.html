@@ -22,7 +22,11 @@
     <div class="agenda-grid">
       <label>
         Sucursal <span class="required-marker">*</span>
-        <select [(ngModel)]="draft.branchId" name="draftBranchId">
+        <select
+          [(ngModel)]="draft.branchId"
+          name="draftBranchId"
+          (ngModelChange)="onBranchChange()"
+        >
           <option [ngValue]="null">Selecciona…</option>
           @for (branch of branches(); track branch.id) {
             <option [ngValue]="branch.id">{{ branch.name }}</option>
@@ -39,8 +43,74 @@
         </select>
       </label>
       <label>
+        Cliente
+        <select [(ngModel)]="draft.clientId" name="draftClientId">
+          <option [ngValue]="null">Sin cliente (según política de la empresa)</option>
+          @for (client of clients(); track client.id) {
+            <option [ngValue]="client.id">{{ client.name }} — {{ client.phone }}</option>
+          }
+        </select>
+      </label>
+      <label class="notes-field">
+        Notas
+        <input type="text" placeholder="Opcional" [(ngModel)]="draft.notes" name="draftNotes" />
+      </label>
+    </div>
+
+    @if (draft.branchId) {
+      <div class="professional-map">
+        <h3>Profesionales de esta sucursal</h3>
+        @if (professionalsAtBranch().length === 0) {
+          <p class="no-schedule">
+            Ningún profesional tiene horario asignado en esta sucursal todavía. Ve a
+            Configuración → Profesionales para definirlo.
+          </p>
+        } @else {
+          <div class="map-scroll">
+            <table class="professional-map-table">
+              <thead>
+                <tr>
+                  <th>Profesional</th>
+                  @for (day of dayNamesShort; track $index) {
+                    <th>{{ day }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (professional of professionalsAtBranch(); track professional.id) {
+                  <tr
+                    class="professional-map-row"
+                    [class.selected]="draft.professionalId === professional.id"
+                    (click)="selectProfessionalFromMap(professional)"
+                  >
+                    <td class="professional-map-name">{{ professional.name }}</td>
+                    @for (day of dayNamesShort; track $index) {
+                      <td>
+                        @if (scheduleFor(professional, $index); as row) {
+                          <span class="map-hours">{{ row.startsAt }}–{{ row.endsAt }}</span>
+                        } @else {
+                          <span class="map-off">—</span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="form-hint">Haz clic en un profesional para elegirlo.</p>
+        }
+      </div>
+    }
+
+    <div class="agenda-grid">
+      <label>
         Profesional <span class="required-marker">*</span>
-        <select [(ngModel)]="draft.professionalId" name="draftProfessionalId">
+        <select
+          [(ngModel)]="draft.professionalId"
+          name="draftProfessionalId"
+          (ngModelChange)="onProfessionalOrDateChange()"
+        >
           <option [ngValue]="null">Selecciona…</option>
           @for (professional of professionals(); track professional.id) {
             <option [ngValue]="professional.id">{{ professional.name }}</option>
@@ -59,23 +129,31 @@
         </label>
       }
       <label>
-        Cliente
-        <select [(ngModel)]="draft.clientId" name="draftClientId">
-          <option [ngValue]="null">Sin cliente (según política de la empresa)</option>
-          @for (client of clients(); track client.id) {
-            <option [ngValue]="client.id">{{ client.name }} — {{ client.phone }}</option>
-          }
-        </select>
-      </label>
-      <label>
-        Fecha y hora <span class="required-marker">*</span>
-        <input type="datetime-local" [(ngModel)]="draft.startAt" name="draftStartAt" />
-      </label>
-      <label class="notes-field">
-        Notas
-        <input type="text" placeholder="Opcional" [(ngModel)]="draft.notes" name="draftNotes" />
+        Fecha <span class="required-marker">*</span>
+        <input
+          type="date"
+          [(ngModel)]="selectedDate"
+          name="selectedDate"
+          (ngModelChange)="onProfessionalOrDateChange()"
+        />
       </label>
     </div>
+
+    @if (draft.branchId && draft.professionalId) {
+      <div class="availability-section">
+        <h3>Disponibilidad del profesional</h3>
+        <app-availability-timeline
+          [schedules]="availability()?.schedules ?? []"
+          [busy]="availability()?.busy ?? []"
+          [isHoliday]="availability()?.isHoliday ?? false"
+          [loading]="availabilityLoading()"
+          [durationMinutes]="selectedService()?.durationMinutes ?? 30"
+          [selectedTime]="selectedTime"
+          (timeSelected)="onTimeSelected($event)"
+        />
+      </div>
+    }
+
     <button type="button" (click)="createAppointment()">+ Agendar cita</button>
   </section>
   @if (formError()) {
@@ -154,9 +232,11 @@
             @if (expandedAppointmentId() === appointment.id) {
               <tr class="history-row" [id]="'appointment-history-' + appointment.id">
                 <td colspan="7">
-                  @if (appointment.historyEvents?.length) {
+                  @if (expandedHistoryEvents() === undefined) {
+                    <p><span class="spinner"></span> Cargando historial…</p>
+                  } @else if (expandedHistoryEvents()?.length) {
                     <ul class="history-list">
-                      @for (event of appointment.historyEvents; track event.id) {
+                      @for (event of expandedHistoryEvents(); track event.id) {
                         <li>
                           <span class="history-date">{{ event.createdAt | date: 'short' }}</span>
                           {{ event.description }}

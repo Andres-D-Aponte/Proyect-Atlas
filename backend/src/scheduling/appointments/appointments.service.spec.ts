@@ -386,4 +386,90 @@ describe('AppointmentsService', () => {
       expect(txHistoryEvent.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('getAvailability', () => {
+    beforeEach(() => {
+      prisma.branch.findFirst.mockResolvedValue(branch);
+      prisma.professional.findFirst.mockResolvedValue(professional1);
+      prisma.professionalSchedule.findMany.mockResolvedValue([
+        { startsAt: '08:00', endsAt: '18:00' },
+      ]);
+      prisma.professionalBlock.findMany.mockResolvedValue([]);
+      prisma.appointment.findMany.mockResolvedValue([]);
+    });
+
+    it('rechaza si la sucursal no pertenece a la empresa', async () => {
+      prisma.branch.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getAvailability(1, 1, 1, '2026-08-03'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('rechaza si el profesional no pertenece a la empresa', async () => {
+      prisma.professional.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getAvailability(1, 1, 1, '2026-08-03'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('marca isHoliday cuando la sucursal está cerrada ese día', async () => {
+      scheduleExceptions.isDateBlocked.mockResolvedValue(true);
+
+      const result = await service.getAvailability(1, 1, 1, '2026-08-03');
+
+      expect(result.isHoliday).toBe(true);
+    });
+
+    it('devuelve el horario del día y combina bloqueos + citas como ocupado, ordenados', async () => {
+      prisma.professionalBlock.findMany.mockResolvedValue([
+        {
+          type: 'LUNCH',
+          startAt: new Date('2026-08-03T17:00:00.000Z'),
+          endAt: new Date('2026-08-03T18:00:00.000Z'),
+        },
+      ]);
+      prisma.appointment.findMany.mockResolvedValue([
+        {
+          startAt: new Date('2026-08-03T14:00:00.000Z'),
+          blockedUntil: new Date('2026-08-03T14:40:00.000Z'),
+          service: { name: 'Corte simple' },
+        },
+      ]);
+
+      const result = await service.getAvailability(1, 1, 1, '2026-08-03');
+
+      expect(result.dayOfWeek).toBe(1);
+      expect(result.schedules).toEqual([
+        { startsAt: '08:00', endsAt: '18:00' },
+      ]);
+      expect(result.busy).toEqual([
+        {
+          startAt: '2026-08-03T14:00:00.000Z',
+          endAt: '2026-08-03T14:40:00.000Z',
+          label: 'Corte simple',
+        },
+        {
+          startAt: '2026-08-03T17:00:00.000Z',
+          endAt: '2026-08-03T18:00:00.000Z',
+          label: 'Almuerzo',
+        },
+      ]);
+    });
+
+    it('usa "Cita" como etiqueta cuando la cita no trae servicio incluido', async () => {
+      prisma.appointment.findMany.mockResolvedValue([
+        {
+          startAt: new Date('2026-08-03T14:00:00.000Z'),
+          blockedUntil: new Date('2026-08-03T14:40:00.000Z'),
+          service: null,
+        },
+      ]);
+
+      const result = await service.getAvailability(1, 1, 1, '2026-08-03');
+
+      expect(result.busy[0].label).toBe('Cita');
+    });
+  });
 });

@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../../people/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../people/auth/guards/roles.guard';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { GetAvailabilityDto } from './dto/get-availability.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 @ApiTags('Scheduling / Appointments')
@@ -53,6 +54,23 @@ export class AppointmentsController {
       clientId: clientId ? Number(clientId) : undefined,
       status,
     });
+  }
+
+  /**
+   * Debe declararse antes de `:id` — si no, Nest intentaría resolver
+   * "availability" como un id numérico y fallaría con 400.
+   */
+  @Get('availability')
+  getAvailability(
+    @CurrentCompanyId() companyId: number,
+    @Query() query: GetAvailabilityDto,
+  ) {
+    return this.appointmentsService.getAvailability(
+      companyId,
+      query.branchId,
+      query.professionalId,
+      query.date,
+    );
   }
 
   @Get(':id')

@@ -11,6 +11,7 @@ const COMPANY_NAME = `Browser Check ${RUN_ID}`;
 const ADMIN_EMAIL = `browser-check-admin-${RUN_ID}@atlas.dev`;
 const ADMIN_PASSWORD = 'ChangeMe123!';
 const STAFF_EMAIL = `browser-check-staff-${RUN_ID}@atlas.dev`;
+const CAJERO_EMAIL = `browser-check-cajero-${RUN_ID}@atlas.dev`;
 
 mkdirSync('screenshots', { recursive: true });
 
@@ -234,65 +235,84 @@ try {
   await page.waitForSelector('text=Corte Agenda');
   await shot('22-agenda-service-created');
 
-  step('23) Ir a Clientes e intentar crear uno sin datos (debe guiar, no fallar en silencio)');
+  step('23) Crear un Cajero real activo (para verificar más adelante que entra a Agenda sin error)');
+  await page.click('a:has-text("Usuarios")');
+  await page.waitForURL('**/settings/users');
+  await page.fill('input[placeholder="Correo *"]', CAJERO_EMAIL);
+  await page.fill('input[placeholder="Contraseña inicial * (mín. 8 caracteres)"]', ADMIN_PASSWORD);
+  await page.selectOption('select', 'RECEPTIONIST_CASHIER');
+  await page.click('button:has-text("Crear usuario")');
+  await page.waitForSelector(`text=${CAJERO_EMAIL}`);
+  await shot('23-cajero-created');
+
+  step('24) Ir a Clientes e intentar crear uno sin datos (debe guiar, no fallar en silencio)');
   await page.click('a:has-text("Clientes")');
   await page.waitForURL('**/clients');
   await page.click('button:has-text("+ Crear cliente")');
   await page.waitForSelector('.client-form .error:has-text("Falta completar el nombre y el teléfono")');
-  await shot('23-client-empty-form-guidance');
+  await shot('24-client-empty-form-guidance');
 
-  step('24) Crear el cliente ya con los datos requeridos');
+  step('25) Crear el cliente ya con los datos requeridos');
   await page.fill('input[name=newClientName]', 'Cliente Browser Check');
   await page.fill('input[name=newClientPhone]', '3001112222');
   await page.click('button:has-text("+ Crear cliente")');
   await page.waitForSelector('text=Cliente Browser Check');
-  await shot('24-client-created');
+  await shot('25-client-created');
 
-  step('25) Buscar el cliente y ver su historial (evento de alta)');
+  step('26) Buscar el cliente y ver su historial (evento de alta)');
   await page.fill('input[name=searchTerm]', 'Browser Check');
   await page.click('button:has-text("Buscar")');
   await page.waitForSelector('text=Cliente Browser Check');
   const clientRow = page.locator('tr', { hasText: 'Cliente Browser Check' });
   await clientRow.locator('button:has-text("Ver historial")').click();
   await page.waitForSelector('text=Cliente registrado.');
-  await shot('25-client-timeline-created');
+  await shot('26-client-timeline-created');
 
-  step('26) Editar el cliente y confirmar el nuevo evento en el historial');
+  step('27) Editar el cliente y confirmar el nuevo evento en el historial');
   await clientRow.locator('button:has-text("Editar")').click();
   await page.fill('input[name=editClientPhone]', '3009998888');
   await page.locator('tr.client-edit-row').locator('button:has-text("Guardar")').click();
   await page.waitForSelector('text=3009998888');
   await clientRow.locator('button:has-text("Ver historial")').click();
   await page.waitForSelector('text=Datos actualizados: teléfono.');
-  await shot('26-client-timeline-updated');
+  await shot('27-client-timeline-updated');
 
-  step('27) Agendar una cita para el profesional, servicio y cliente ya creados');
+  step('28) Agendar una cita usando el mapa de profesionales y la línea de disponibilidad');
   await page.click('a:has-text("Agenda")');
   await page.waitForURL('**/agenda');
-  const now = new Date(Date.now() + 5 * 60_000);
-  const pad = (n) => String(n).padStart(2, '0');
-  const startAtLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
   await page.selectOption('select[name=draftBranchId]', { label: 'Sucursal Browser Check' });
   await page.selectOption('select[name=draftServiceId]', { label: 'Corte Agenda (30 min)' });
-  await page.selectOption('select[name=draftProfessionalId]', { label: 'Profesional Browser Check' });
   await page.selectOption('select[name=draftClientId]', {
     label: 'Cliente Browser Check — 3009998888',
   });
-  await page.fill('input[name=draftStartAt]', startAtLocal);
+  await page.waitForSelector('.professional-map-table');
+  await page
+    .locator('.professional-map-row', { hasText: 'Profesional Browser Check' })
+    .click();
+  await shot('28a-professional-map');
+  await page.waitForSelector('.timeline-track');
+  await page.locator('.timeline-track').click();
+  await page.waitForSelector('.timeline-selected-time strong');
+  await shot('28b-availability-timeline-slot-picked');
   await page.click('button:has-text("+ Agendar cita")');
   await page.waitForSelector('td:has-text("Corte Agenda")');
-  await shot('27-appointment-created');
+  await shot('28c-appointment-created');
 
-  step('28) Intentar una doble reserva para el mismo profesional/horario (debe rechazarse)');
+  step('29) Intentar una doble reserva para el mismo profesional/horario (debe rechazarse)');
   await page.selectOption('select[name=draftBranchId]', { label: 'Sucursal Browser Check' });
   await page.selectOption('select[name=draftServiceId]', { label: 'Corte Agenda (30 min)' });
-  await page.selectOption('select[name=draftProfessionalId]', { label: 'Profesional Browser Check' });
-  await page.fill('input[name=draftStartAt]', startAtLocal);
+  await page.waitForSelector('.professional-map-table');
+  await page
+    .locator('.professional-map-row', { hasText: 'Profesional Browser Check' })
+    .click();
+  await page.waitForSelector('.timeline-track');
+  await page.locator('.timeline-track').click();
+  await page.waitForSelector('.timeline-selected-time strong');
   await page.click('button:has-text("+ Agendar cita")');
   await page.waitForSelector('.toast-error:has-text("ya tiene otra cita")');
-  await shot('28-double-booking-rejected');
+  await shot('29-double-booking-rejected');
 
-  step('29) Cambiar el estado de la cita y ver su historial');
+  step('30) Cambiar el estado de la cita y ver su historial');
   const appointmentRow = page.locator('tr', { hasText: 'Corte Agenda' });
   await appointmentRow.locator('select').selectOption('IN_PROGRESS');
   await page.waitForFunction(() => {
@@ -303,9 +323,9 @@ try {
   });
   await appointmentRow.locator('button:has-text("Historial")').click();
   await page.waitForSelector('.history-list li:has-text("En atención")');
-  await shot('29-appointment-history');
+  await shot('30-appointment-history');
 
-  step('30) Agregar una entrada a la lista de espera y luego cancelarla');
+  step('31) Agregar una entrada a la lista de espera y luego cancelarla');
   const waitlistSection = page.locator('.waitlist-section');
   await waitlistSection.locator('button:has-text("+ Agregar a lista de espera")').click();
   await page.selectOption('#waitlist-form select[name=waitlistBranchId]', { label: 'Sucursal Browser Check' });
@@ -317,7 +337,7 @@ try {
   });
   await page.locator('#waitlist-form button:has-text("Agregar")').click();
   await waitlistSection.locator('.badge:has-text("En espera")').waitFor();
-  await shot('30-waitlist-entry-created');
+  await shot('31-waitlist-entry-created');
 
   await waitlistSection
     .locator('tr', { hasText: 'Cliente Browser Check' })
@@ -331,7 +351,24 @@ try {
   await page.waitForURL('**/login');
   await shot('32-logout-from-business-admin-screen');
 
-  // Los pasos 18/19/28 disparan a propósito un 409 y dos 400 para probar el
+  step('33) Iniciar sesión como Cajero real y confirmar que entra a Agenda sin error 403');
+  await page.fill('input[type=email]', CAJERO_EMAIL);
+  await page.fill('input[type=password]', ADMIN_PASSWORD);
+  await page.click('button:has-text("Ingresar")');
+  await page.waitForURL('**/clients');
+  await shot('33a-cajero-login');
+
+  await page.click('a:has-text("Agenda")');
+  await page.waitForURL('**/agenda');
+  await page.waitForSelector('.waitlist-section');
+  await shot('33b-cajero-agenda-access-ok');
+
+  step('34) Cerrar sesión del Cajero');
+  await page.click('button:has-text("Salir")');
+  await page.waitForURL('**/login');
+  await shot('34-cajero-logout');
+
+  // Los pasos 18/19/29 disparan a propósito un 409 y dos 400 para probar el
   // sistema de notificaciones (incluida la validación de doble reserva de
   // Agenda); Chromium los registra como "console error" aunque la app los
   // manejó correctamente (se ve el toast). Se descuentan para no confundirlos

@@ -17,6 +17,25 @@ import { WaitlistService } from '../waitlist/waitlist.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
+export interface AvailabilityWindow {
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface AvailabilityBusyRange {
+  startAt: string;
+  endAt: string;
+  label: string;
+}
+
+export interface ProfessionalAvailability {
+  date: string;
+  dayOfWeek: number;
+  isHoliday: boolean;
+  schedules: AvailabilityWindow[];
+  busy: AvailabilityBusyRange[];
+}
+
 /** Estados que de verdad ocupan la agenda de un profesional/recurso. */
 const BLOCKING_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.PENDING,
@@ -48,6 +67,10 @@ function toHHMM(date: Date): string {
   const hh = String(date.getUTCHours()).padStart(2, '0');
   const mm = String(date.getUTCMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 interface AvailabilityCheck {
@@ -243,6 +266,89 @@ export class AppointmentsService {
     }
 
     return appointment;
+  }
+
+  /**
+   * Disponibilidad de un profesional en una sucursal/día concretos — pensada
+   * para que el frontend dibuje una línea de tiempo visual (horario abierto
+   * en verde, bloqueos/citas ocupando franjas en rojo) en vez de que el
+   * usuario descubra el rechazo recién al intentar "Agendar cita".
+   */
+  async getAvailability(
+    companyId: number,
+    branchId: number,
+    professionalId: number,
+    dateStr: string,
+  ): Promise<ProfessionalAvailability> {
+    const [branch, professional] = await Promise.all([
+      this.prisma.branch.findFirst({ where: { id: branchId, companyId } }),
+      this.prisma.professional.findFirst({
+        where: { id: professionalId, companyId },
+      }),
+    ]);
+    if (!branch)
+      throw new NotFoundException(`Sucursal ${branchId} no encontrada`);
+    if (!professional) {
+      throw new NotFoundException(
+        `Profesional ${professionalId} no encontrado`,
+      );
+    }
+
+    const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const dayOfWeek = dayStart.getUTCDay();
+
+    const [isHoliday, schedules, blocks, appointments] = await Promise.all([
+      this.scheduleExceptionsService.isDateBlocked(
+        companyId,
+        branchId,
+        dayStart,
+      ),
+      this.prisma.professionalSchedule.findMany({
+        where: { professionalId, branchId, dayOfWeek },
+        orderBy: { startsAt: 'asc' },
+      }),
+      this.prisma.professionalBlock.findMany({
+        where: {
+          professionalId,
+          startAt: { lt: dayEnd },
+          endAt: { gt: dayStart },
+        },
+      }),
+      this.prisma.appointment.findMany({
+        where: {
+          OR: [{ professionalId }, { secondProfessionalId: professionalId }],
+          status: { in: BLOCKING_STATUSES },
+          startAt: { lt: dayEnd },
+          blockedUntil: { gt: dayStart },
+        },
+        include: { service: true },
+      }),
+    ]);
+
+    const busy: AvailabilityBusyRange[] = [
+      ...blocks.map((block) => ({
+        startAt: block.startAt.toISOString(),
+        endAt: block.endAt.toISOString(),
+        label: capitalize(BLOCK_TYPE_LABELS[block.type]),
+      })),
+      ...appointments.map((appointment) => ({
+        startAt: appointment.startAt.toISOString(),
+        endAt: appointment.blockedUntil.toISOString(),
+        label: appointment.service?.name ?? 'Cita',
+      })),
+    ].sort((a, b) => a.startAt.localeCompare(b.startAt));
+
+    return {
+      date: dateStr,
+      dayOfWeek,
+      isHoliday,
+      schedules: schedules.map((schedule) => ({
+        startsAt: schedule.startsAt,
+        endsAt: schedule.endsAt,
+      })),
+      busy,
+    };
   }
 
   async update(
